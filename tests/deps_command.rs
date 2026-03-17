@@ -324,7 +324,7 @@ fn deps_external_dependencies_use_stable_ordering() {
 fn deps_accepts_explicit_patchignored_target_but_omits_ignored_dependents() {
     let value = run_patch_json([
         "deps",
-        "tests/fixtures/patchignore/visible_api.rs",
+        "tests/fixtures/patchignore/ignored-dir/ignored_api.rs",
         "--scope",
         PATCHIGNORE_SCOPE,
         "--json",
@@ -343,16 +343,16 @@ fn deps_accepts_explicit_patchignored_target_but_omits_ignored_dependents() {
         .collect();
 
     assert!(
-        value["data"]["path"] == "visible_api.rs"
-            || value["data"]["path"] == "tests/fixtures/patchignore/visible_api.rs",
+        value["data"]["path"] == "ignored-dir/ignored_api.rs"
+            || value["data"]["path"] == "tests/fixtures/patchignore/ignored-dir/ignored_api.rs",
         "expected explicit ignored target path to be accepted: {value:#}"
     );
     assert!(
-        used_by_paths.contains(&"visible_caller.rs"),
+        used_by_paths.contains(&"visible_uses_ignored.rs"),
         "expected visible dependent to remain in reverse dependencies: {value:#}"
     );
     assert!(
-        !used_by_paths.contains(&"ignored-dir/ignored_caller.rs"),
+        !used_by_paths.contains(&"ignored-dir/ignored_dependent.rs"),
         "expected ignored dependent to be excluded from traversal-derived results: {value:#}"
     );
 }
