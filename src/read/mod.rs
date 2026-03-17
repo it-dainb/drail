@@ -370,9 +370,29 @@ pub fn is_markdown_heading_line(path: &Path, line_number: usize) -> Result<bool,
     Ok(markdown_heading_line_from_bytes(&buf, line_number))
 }
 
+pub fn markdown_heading_line_text(
+    path: &Path,
+    line_number: usize,
+) -> Result<Option<String>, PatchError> {
+    if !matches!(detect_file_type(path), FileType::Markdown) {
+        return Ok(None);
+    }
+
+    let buf = fs::read(path).map_err(|source| PatchError::IoError {
+        path: path.to_path_buf(),
+        source,
+    })?;
+
+    Ok(markdown_heading_line_text_from_bytes(&buf, line_number))
+}
+
 fn markdown_heading_line_from_bytes(buf: &[u8], line_number: usize) -> bool {
+    markdown_heading_line_text_from_bytes(buf, line_number).is_some()
+}
+
+fn markdown_heading_line_text_from_bytes(buf: &[u8], line_number: usize) -> Option<String> {
     if line_number == 0 {
-        return false;
+        return None;
     }
 
     let mut line_offsets: Vec<usize> = vec![0];
@@ -381,7 +401,7 @@ fn markdown_heading_line_from_bytes(buf: &[u8], line_number: usize) -> bool {
     }
 
     if line_number > line_offsets.len() {
-        return false;
+        return None;
     }
 
     let mut in_code_block = false;
@@ -403,11 +423,11 @@ fn markdown_heading_line_from_bytes(buf: &[u8], line_number: usize) -> bool {
         }
 
         if current_line == line_number {
-            return !in_code_block && is_markdown_heading(trimmed);
+            return (!in_code_block && is_markdown_heading(trimmed)).then(|| trimmed.to_string());
         }
     }
 
-    false
+    None
 }
 
 fn is_markdown_heading(line: &str) -> bool {

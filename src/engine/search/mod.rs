@@ -98,28 +98,20 @@ fn run(
     Ok(command_result)
 }
 
-fn diagnostics(query: &str, scope: &Path, mode: SearchMode, total_found: usize) -> Vec<Diagnostic> {
+fn diagnostics(
+    query: &str,
+    _scope: &Path,
+    _mode: SearchMode,
+    total_found: usize,
+) -> Vec<Diagnostic> {
     if total_found == 0 {
-        let suggestion = match mode {
-            SearchMode::Text if looks_like_slash_delimited_regex(query) => Some(format!(
-                "Try: patch search regex {:?} --scope {}",
-                &query[1..query.len() - 1],
-                scope.display()
-            )),
-            _ => None,
-        };
-
         return vec![Diagnostic {
             level: DiagnosticLevel::Hint,
             code: "no_search_matches".into(),
             message: format!("no search matches found for \"{query}\""),
-            suggestion,
+            suggestion: None,
         }];
     }
 
     Vec::new()
-}
-
-fn looks_like_slash_delimited_regex(query: &str) -> bool {
-    query.starts_with('/') && query.ends_with('/') && query.len() > 2
 }

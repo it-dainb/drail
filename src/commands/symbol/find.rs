@@ -1,12 +1,14 @@
 use crate::cli::args::SymbolFindArgs;
 use crate::engine::symbol;
 use crate::error::PatchError;
+use crate::output::json::envelope::NextItem;
 use crate::output::CommandOutput;
 use crate::output::{json, text};
 use serde_json::{json, Map, Value};
 
 pub fn run(args: &SymbolFindArgs) -> Result<CommandOutput, PatchError> {
     let result = symbol::run(&args.query, &args.scope, args.kind, args.budget)?;
+    let next = next_for_symbol_find(&result);
     let mut output = CommandOutput::with_parts(
         "symbol.find",
         text::symbol::render(&result),
@@ -15,8 +17,23 @@ pub fn run(args: &SymbolFindArgs) -> Result<CommandOutput, PatchError> {
         true,
     );
     output.meta = meta_for_symbol_find(&result.data);
+    output.next = next;
 
     Ok(output)
+}
+
+fn next_for_symbol_find(result: &symbol::SymbolFindCommandResult) -> Vec<NextItem> {
+    if result.data.matches.is_empty() {
+        return vec![crate::output::suggestion(
+            "Fallback to text search when symbol search finds no confident matches",
+            format!(
+                "patch search text {:?} --scope {}",
+                result.data.query, result.data.scope
+            ),
+        )];
+    }
+
+    Vec::new()
 }
 
 fn meta_for_symbol_find(data: &symbol::SymbolFindData) -> Map<String, Value> {

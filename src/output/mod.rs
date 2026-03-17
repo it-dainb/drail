@@ -18,6 +18,16 @@ pub struct CommandOutput {
     pub ok: bool,
 }
 
+#[must_use]
+pub fn suggestion(message: impl Into<String>, command: impl Into<String>) -> NextItem {
+    NextItem {
+        kind: "suggestion".into(),
+        message: message.into(),
+        command: command.into(),
+        confidence: "high".into(),
+    }
+}
+
 impl CommandOutput {
     #[must_use]
     pub fn with_parts(
