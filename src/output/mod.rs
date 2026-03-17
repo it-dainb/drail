@@ -45,7 +45,7 @@ impl CommandOutput {
     pub fn from_error(command: &'static str, error: &PatchError) -> Self {
         Self {
             command,
-            text: text::render(command, "", &[], &[diagnostic_from_error(error)]),
+            text: text::render(command, "", &[diagnostic_from_error(error)]),
             data: serde_json::json!({}),
             meta: Map::new(),
             next: next_from_error(error),
@@ -146,7 +146,7 @@ fn next_from_error(error: &PatchError) -> Vec<NextItem> {
 }
 
 fn wrap_data(meta: Map<String, Value>, data: Value) -> EnvelopeData<Value> {
-    let mut payload = match data {
+    let payload = match data {
         Value::Object(map) => map,
         other => {
             let mut map = Map::new();
@@ -154,8 +154,6 @@ fn wrap_data(meta: Map<String, Value>, data: Value) -> EnvelopeData<Value> {
             map
         }
     };
-
-    payload.insert("meta".into(), Value::Object(meta.clone()));
 
     EnvelopeData {
         meta,
