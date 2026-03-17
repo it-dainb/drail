@@ -130,10 +130,7 @@ pub fn run(
             level: DiagnosticLevel::Hint,
             code: "no_symbol_matches".into(),
             message: format!("no symbol matches found for \"{query}\""),
-            suggestion: Some(format!(
-                "Try: patch search text {query:?} --scope {}",
-                scope.display()
-            )),
+            suggestion: None,
         }]
     } else {
         Vec::new()
@@ -252,10 +249,7 @@ fn callers_diagnostics(query: &str, scope: &Path) -> Result<Vec<Diagnostic>, Pat
             message: format!(
                 "\"{query}\" is not a callable symbol, so callers may be empty or misleading"
             ),
-            suggestion: Some(format!(
-                "Try: patch symbol find {query:?} --scope {}",
-                scope.display()
-            )),
+            suggestion: None,
         }]);
     }
 
@@ -264,10 +258,7 @@ fn callers_diagnostics(query: &str, scope: &Path) -> Result<Vec<Diagnostic>, Pat
             level: DiagnosticLevel::Hint,
             code: "no_symbol_matches".into(),
             message: format!("no symbol matches found for \"{query}\""),
-            suggestion: Some(format!(
-                "Try: patch search text {query:?} --scope {}",
-                scope.display()
-            )),
+            suggestion: None,
         }]);
     }
 

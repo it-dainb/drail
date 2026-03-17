@@ -1,6 +1,7 @@
 use crate::cli::args::ReadArgs;
 use crate::engine::read::{self, ReadSelector};
 use crate::error::PatchError;
+use crate::output::json::envelope::NextItem;
 use crate::output::CommandOutput;
 use crate::output::{json, text};
 use crate::types::FileType;
@@ -17,8 +18,42 @@ pub fn run(args: &ReadArgs) -> Result<CommandOutput, PatchError> {
         true,
     );
     output.meta = meta_for_read(&args.path, &result.data.selector)?;
+    output.next = next_for_read(&args.path, &result.data.selector, &output.meta);
 
     Ok(output)
+}
+
+fn next_for_read(
+    path: &std::path::Path,
+    selector: &read::ReadSelectorData,
+    meta: &Map<String, Value>,
+) -> Vec<NextItem> {
+    let file_kind = meta.get("file_kind").and_then(Value::as_str);
+    let heading_aligned = meta
+        .get("heading_aligned")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    match selector {
+        read::ReadSelectorData::Lines { start, .. }
+            if file_kind == Some("markdown") && heading_aligned =>
+        {
+            let Ok(Some(heading_line)) = crate::read::markdown_heading_line_text(path, *start)
+            else {
+                return Vec::new();
+            };
+
+            vec![crate::output::suggestion(
+                format!("Read the full markdown section starting at line {start} with --heading"),
+                format!(
+                    "patch read {:?} --heading {:?}",
+                    path.display().to_string(),
+                    heading_line
+                ),
+            )]
+        }
+        _ => Vec::new(),
+    }
 }
 
 fn parse_selector(args: &ReadArgs) -> Result<ReadSelector, PatchError> {
