@@ -24,9 +24,10 @@ Every command supports `--json` and returns the same top-level shape:
 ```json
 {
   "command": "symbol.find",
-  "schema_version": 1,
+  "schema_version": 2,
   "ok": true,
   "data": {},
+  "next": [],
   "diagnostics": []
 }
 ```
@@ -34,9 +35,10 @@ Every command supports `--json` and returns the same top-level shape:
 ### Envelope fields
 
 - `command`: stable command identifier such as `read`, `symbol.find`, or `search.regex`
-- `schema_version`: currently `1`
+- `schema_version`: currently `2`
 - `ok`: boolean success flag
-- `data`: command-specific payload object
+- `data`: command-specific payload object with always-present `meta`
+- `next`: ordered list of high-confidence follow-up suggestions
 - `diagnostics`: ordered list of recovery diagnostics
 
 ## Diagnostics contract
@@ -68,14 +70,20 @@ Current behavior stays intentionally sparse:
 Dense text output is designed for agent loops and follows a stable section order:
 
 1. summary header
-2. evidence
-3. diagnostics
+2. meta
+3. evidence
+4. next
+5. diagnostics
+
+Empty `Next` and `Diagnostics` sections render as `(none)`.
 
 Within the diagnostics section, entries are ordered by severity:
 
 1. errors
 2. warnings
 3. hints
+
+Text diagnostics are human-readable entries that include the diagnostic message rather than bare severity tags. Text error output uses the same section structure and renders on stderr.
 
 ## Command-specific data
 

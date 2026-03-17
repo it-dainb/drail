@@ -143,8 +143,12 @@ patch is designed for agent recovery, not just happy-path demos.
 Text output is optimized for direct consumption in an agent loop:
 
 1. summary header first
-2. evidence block second
-3. diagnostics last
+2. meta block second
+3. evidence block third
+4. next block fourth
+5. diagnostics last
+
+Empty `Next` and `Diagnostics` sections render as `(none)`.
 
 Diagnostics are ordered by severity:
 
@@ -152,7 +156,7 @@ Diagnostics are ordered by severity:
 - warnings
 - hints
 
-That ordering is stable across commands so agents can read the useful evidence before deciding whether a recovery hint matters.
+That ordering is stable across commands so agents can read the useful evidence before deciding whether a recovery hint matters. Diagnostic entries remain human-readable, and text-mode errors use the same section structure on stderr.
 
 ### JSON output
 
@@ -161,14 +165,15 @@ JSON output uses a shared envelope across all commands:
 ```json
 {
   "command": "symbol.find",
-  "schema_version": 1,
+  "schema_version": 2,
   "ok": true,
   "data": {},
+  "next": [],
   "diagnostics": []
 }
 ```
 
-Command-specific payloads live under `data`. Shared recovery guidance lives under `diagnostics`. See [`docs/cli-contract.md`](docs/cli-contract.md) for the exact contract.
+Command-specific payloads live under `data`, which always includes `meta`. Shared recovery guidance lives under top-level `next` and `diagnostics`. See [`docs/cli-contract.md`](docs/cli-contract.md) for the exact contract.
 
 ## Diagnostics and recovery
 
