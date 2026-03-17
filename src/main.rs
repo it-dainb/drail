@@ -6,6 +6,9 @@ fn main() {
     configure_thread_pools();
 
     if let Err(error) = cli::run() {
+        if matches!(error, pm_patch::error::PatchError::AlreadyReported { .. }) {
+            process::exit(error.exit_code());
+        }
         eprintln!("{error}");
         process::exit(error.exit_code());
     }

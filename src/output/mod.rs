@@ -71,12 +71,9 @@ pub fn write_error(output: &CommandOutput, json_mode: bool, is_tty: bool) {
 
 fn diagnostic_from_error(error: &PatchError) -> Diagnostic {
     match error {
-        PatchError::AlreadyReported { .. } => Diagnostic {
-            level: DiagnosticLevel::Error,
-            code: "already_reported".into(),
-            message: String::new(),
-            suggestion: None,
-        },
+        PatchError::AlreadyReported { .. } => {
+            unreachable!("AlreadyReported is an internal control-flow signal")
+        }
         PatchError::NotFound { suggestion, .. } => Diagnostic {
             level: DiagnosticLevel::Error,
             code: "not_found".into(),
