@@ -66,8 +66,7 @@ impl PatchError {
     #[must_use]
     pub fn exit_code(&self) -> i32 {
         match self {
-            Self::AlreadyReported { exit_code } => *exit_code,
-            Self::Clap { exit_code, .. } => *exit_code,
+            Self::AlreadyReported { exit_code } | Self::Clap { exit_code, .. } => *exit_code,
             Self::NotFound { .. } | Self::IoError { .. } => 2,
             Self::InvalidQuery { .. } | Self::ParseError { .. } => 3,
             Self::PermissionDenied { .. } => 4,

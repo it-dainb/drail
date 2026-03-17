@@ -169,3 +169,31 @@ fn files_text_no_match_includes_single_next_step_hint() {
         "expected a next-step suggestion in text output: {text}"
     );
 }
+
+#[test]
+fn files_no_match_guidance_renders_in_next_section() {
+    let output = run_patch(["files", "*.definitelymissingxyz", "--scope", "src"]);
+    let text = stdout(&output);
+
+    assert_success(&output);
+
+    let evidence = text
+        .split("## Evidence\n")
+        .nth(1)
+        .and_then(|section| section.split("\n\n## Next\n").next())
+        .unwrap_or_else(|| panic!("expected Evidence section: {text}"));
+    let next = text
+        .split("## Next\n")
+        .nth(1)
+        .and_then(|section| section.split("\n\n## Diagnostics\n").next())
+        .unwrap_or_else(|| panic!("expected Next section: {text}"));
+
+    assert!(
+        !evidence.contains("Try:"),
+        "expected Evidence to stay evidentiary only: {text}"
+    );
+    assert!(
+        next.contains("patch files"),
+        "expected recovery guidance in Next section: {text}"
+    );
+}

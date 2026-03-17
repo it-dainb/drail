@@ -41,16 +41,6 @@ pub fn render(result: &SymbolFindCommandResult) -> String {
         }
     }
 
-    if result.data.matches.is_empty() {
-        if let Some(suggestion) = result
-            .diagnostics
-            .iter()
-            .find_map(|diagnostic| diagnostic.suggestion.as_deref())
-        {
-            let _ = write!(output, "\n\nTry: {suggestion}");
-        }
-    }
-
     output
 }
 

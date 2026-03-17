@@ -119,10 +119,6 @@ fn render_diagnostics(rendered: &mut String, diagnostics: &[Diagnostic]) {
         if !diagnostic.code.is_empty() {
             let _ = write!(rendered, " [code: {}]", diagnostic.code);
         }
-
-        if let Some(suggestion) = &diagnostic.suggestion {
-            let _ = write!(rendered, " [suggestion: {}]", suggestion);
-        }
     }
 }
 
