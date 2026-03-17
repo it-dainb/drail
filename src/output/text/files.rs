@@ -22,15 +22,5 @@ pub fn render(result: &FilesCommandResult) -> String {
         let _ = write!(output, "\n\n- {}\n  {}", entry.path, entry.preview);
     }
 
-    if result.data.files.is_empty() {
-        if let Some(suggestion) = result
-            .diagnostics
-            .iter()
-            .find_map(|diagnostic| diagnostic.suggestion.as_deref())
-        {
-            let _ = write!(output, "\n\nTry: {suggestion}");
-        }
-    }
-
     output
 }
