@@ -9,17 +9,31 @@ use serde_json::{json, Map, Value};
 pub fn run(args: &FilesArgs) -> Result<CommandOutput, PatchError> {
     let result = files::run(&args.pattern, &args.scope, args.budget)?;
     let next = next_for_files(&result);
+    let diagnostics = diagnostics_without_suggestions(&result.diagnostics);
     let mut output = CommandOutput::with_parts(
         "files",
         text::files::render(&result),
         json::files::render(&result),
-        result.diagnostics,
+        diagnostics,
         true,
     );
     output.meta = meta_for_files(&result.data);
     output.next = next;
 
     Ok(output)
+}
+
+fn diagnostics_without_suggestions(
+    diagnostics: &[crate::output::json::envelope::Diagnostic],
+) -> Vec<crate::output::json::envelope::Diagnostic> {
+    diagnostics
+        .iter()
+        .cloned()
+        .map(|mut diagnostic| {
+            diagnostic.suggestion = None;
+            diagnostic
+        })
+        .collect()
 }
 
 fn next_for_files(result: &files::FilesCommandResult) -> Vec<NextItem> {
