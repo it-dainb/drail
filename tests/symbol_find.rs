@@ -1,0 +1,204 @@
+use std::ffi::OsStr;
+use std::process::Output;
+
+use assert_cmd::Command;
+use serde_json::Value;
+
+fn run_patch<I, S>(args: I) -> Output
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    Command::cargo_bin("patch")
+        .expect("patch binary should build for integration tests")
+        .args(args)
+        .output()
+        .expect("patch should execute")
+}
+
+fn stdout(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+fn stderr(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stderr).into_owned()
+}
+
+fn assert_success(output: &Output) {
+    assert!(
+        output.status.success(),
+        "expected success, got status {:?}\nstdout:\n{}\nstderr:\n{}",
+        output.status.code(),
+        stdout(output),
+        stderr(output)
+    );
+}
+
+fn run_patch_json<I, S>(args: I) -> Value
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let output = run_patch(args);
+    assert_success(&output);
+    serde_json::from_slice(&output.stdout).unwrap_or_else(|error| {
+        panic!(
+            "expected valid json stdout, got error: {error}\nstdout:\n{}\nstderr:\n{}",
+            stdout(&output),
+            stderr(&output)
+        )
+    })
+}
+
+fn matches(value: &Value) -> &[Value] {
+    value["data"]["matches"].as_array().unwrap_or_else(|| {
+        panic!(
+            "expected symbol.find matches array, got:\n{}",
+            serde_json::to_string_pretty(value).expect("json value should serialize")
+        )
+    })
+}
+
+#[test]
+fn symbol_find_returns_definitions_before_usages() {
+    let value = run_patch_json(["symbol", "find", "main", "--scope", "src", "--json"]);
+    let matches = matches(&value);
+
+    assert!(
+        matches.len() >= 2,
+        "expected at least two matches: {value:#}"
+    );
+    assert_eq!(matches[0]["kind"], "definition");
+    assert_eq!(matches[1]["kind"], "usage");
+}
+
+#[test]
+fn symbol_find_kind_definition_filters_to_definitions_only() {
+    let value = run_patch_json([
+        "symbol",
+        "find",
+        "common",
+        "--scope",
+        "src/output",
+        "--kind",
+        "definition",
+        "--json",
+    ]);
+
+    let matches = matches(&value);
+    assert!(
+        !matches.is_empty(),
+        "expected definition matches: {value:#}"
+    );
+    assert!(matches.iter().all(|entry| entry["kind"] == "definition"));
+}
+
+#[test]
+fn symbol_find_kind_usage_filters_to_usages_only() {
+    let value = run_patch_json([
+        "symbol",
+        "find",
+        "common",
+        "--scope",
+        "src/output",
+        "--kind",
+        "usage",
+        "--json",
+    ]);
+
+    let matches = matches(&value);
+    assert!(!matches.is_empty(), "expected usage matches: {value:#}");
+    assert!(matches.iter().all(|entry| entry["kind"] == "usage"));
+}
+
+#[test]
+fn symbol_find_no_match_reports_one_recovery_suggestion() {
+    let value = run_patch_json([
+        "symbol",
+        "find",
+        "definitely_missing_symbol_xyz",
+        "--scope",
+        "src",
+        "--json",
+    ]);
+
+    assert_eq!(
+        value["ok"], true,
+        "expected no-match to stay non-fatal: {value:#}"
+    );
+    assert_eq!(matches(&value).len(), 0);
+
+    let diagnostics = value["diagnostics"].as_array().unwrap_or_else(|| {
+        panic!(
+            "expected diagnostics array, got:\n{}",
+            serde_json::to_string_pretty(&value).expect("json value should serialize")
+        )
+    });
+
+    let suggestions: Vec<&Value> = diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.get("suggestion").is_some())
+        .collect();
+
+    assert_eq!(
+        suggestions.len(),
+        1,
+        "expected exactly one recovery suggestion: {value:#}"
+    );
+}
+
+#[test]
+fn symbol_find_multiple_definition_matches_use_stable_ordering() {
+    let value = run_patch_json([
+        "symbol",
+        "find",
+        "render",
+        "--scope",
+        "src/output",
+        "--kind",
+        "definition",
+        "--json",
+    ]);
+
+    let matches = matches(&value);
+    let paths: Vec<&str> = matches
+        .iter()
+        .map(|entry| {
+            entry["path"].as_str().unwrap_or_else(|| {
+                panic!(
+                    "expected path string, got:\n{}",
+                    serde_json::to_string_pretty(entry).expect("json value should serialize")
+                )
+            })
+        })
+        .collect();
+
+    let mut sorted = paths.clone();
+    sorted.sort_unstable();
+    assert_eq!(
+        paths, sorted,
+        "expected stable path ordering for multiple matches"
+    );
+}
+
+#[test]
+fn symbol_find_text_no_match_includes_single_next_step_hint() {
+    let output = run_patch([
+        "symbol",
+        "find",
+        "definitely_missing_symbol_xyz",
+        "--scope",
+        "src",
+    ]);
+    let text = stdout(&output);
+
+    assert_success(&output);
+    assert!(
+        text.contains("## Diagnostics"),
+        "expected diagnostics block: {text}"
+    );
+    assert!(
+        text.contains("Try:") || text.contains("try:"),
+        "expected a next-step suggestion in text output: {text}"
+    );
+}

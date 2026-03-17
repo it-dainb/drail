@@ -1,0 +1,83 @@
+[package]
+name = "patch"
+version = "0.0.1"
+edition = "2021"
+description = "CLI-first code intelligence for AI agents"
+license = "MIT"
+repository = "https://github.com/it-dainb/patch"
+readme = "README.md"
+keywords = ["code-search", "tree-sitter", "ai-agents", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "patch"
+path = "src/main.rs"
+
+[dependencies]
+# CLI
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
+
+# Tree-sitter (AST outlines)
+tree-sitter = "0.25"
+streaming-iterator = "0.1"
+tree-sitter-rust = "0.24"
+tree-sitter-javascript = "0.23"
+tree-sitter-typescript = "0.23"
+tree-sitter-python = "0.23"
+tree-sitter-go = "0.23"
+tree-sitter-java = "0.23"
+tree-sitter-c = "0.24"
+tree-sitter-cpp = "0.23"
+tree-sitter-ruby = "0.23"
+tree-sitter-php = "0.24"
+tree-sitter-scala = "0.24"
+tree-sitter-c-sharp = "0.23"
+tree-sitter-swift = "0.7"
+
+# Search (ripgrep internals)
+grep-regex = "0.1"
+grep-searcher = "0.1"
+ignore = "0.4"
+globset = "0.4"
+
+# Regex escaping (transitive dep of grep-regex, used directly for literal search)
+regex-syntax = "0.8"
+
+# Byte scanning (SIMD-accelerated)
+memchr = "2"
+memmap2 = "0.9"
+
+# Parallelism
+rayon = "1"
+
+# Concurrent cache
+dashmap = "6"
+
+# Structured data parsing
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+[dev-dependencies]
+assert_cmd = "2"
+serde_json = "1"
+
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
+overflow-checks = false
+
+[profile.release.build-override]
+opt-level = 2
+
+# Optimized but still fast to compile during local development
+[profile.fast]
+inherits = "release"
+lto = "thin"
+codegen-units = 8
+strip = false

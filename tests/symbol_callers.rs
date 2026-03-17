@@ -1,0 +1,182 @@
+use std::ffi::OsStr;
+use std::process::Output;
+
+use assert_cmd::Command;
+use serde_json::Value;
+
+fn run_patch<I, S>(args: I) -> Output
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    Command::cargo_bin("patch")
+        .expect("patch binary should build for integration tests")
+        .args(args)
+        .output()
+        .expect("patch should execute")
+}
+
+fn stdout(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+fn stderr(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stderr).into_owned()
+}
+
+fn assert_success(output: &Output) {
+    assert!(
+        output.status.success(),
+        "expected success, got status {:?}\nstdout:\n{}\nstderr:\n{}",
+        output.status.code(),
+        stdout(output),
+        stderr(output)
+    );
+}
+
+fn run_patch_json<I, S>(args: I) -> Value
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let output = run_patch(args);
+    assert_success(&output);
+    serde_json::from_slice(&output.stdout).unwrap_or_else(|error| {
+        panic!(
+            "expected valid json stdout, got error: {error}\nstdout:\n{}\nstderr:\n{}",
+            stdout(&output),
+            stderr(&output)
+        )
+    })
+}
+
+fn callers(value: &Value) -> &[Value] {
+    value["data"]["callers"].as_array().unwrap_or_else(|| {
+        panic!(
+            "expected symbol.callers callers array, got:\n{}",
+            serde_json::to_string_pretty(value).expect("json value should serialize")
+        )
+    })
+}
+
+fn impact(value: &Value) -> &[Value] {
+    value["data"]["impact"].as_array().unwrap_or_else(|| {
+        panic!(
+            "expected symbol.callers impact array, got:\n{}",
+            serde_json::to_string_pretty(value).expect("json value should serialize")
+        )
+    })
+}
+
+#[test]
+fn symbol_callers_returns_callers_in_stable_order() {
+    let value = run_patch_json([
+        "symbol",
+        "callers",
+        "render",
+        "--scope",
+        "src/output",
+        "--json",
+    ]);
+    let callers = callers(&value);
+
+    assert_eq!(value["command"], "symbol.callers");
+    assert!(
+        !callers.is_empty(),
+        "expected at least one caller: {value:#}"
+    );
+
+    let locations: Vec<(&str, u64)> = callers
+        .iter()
+        .map(|caller| {
+            (
+                caller["path"].as_str().unwrap_or_else(|| {
+                    panic!(
+                        "expected caller path string, got:\n{}",
+                        serde_json::to_string_pretty(caller).expect("json value should serialize")
+                    )
+                }),
+                caller["line"].as_u64().unwrap_or_else(|| {
+                    panic!(
+                        "expected caller line number, got:\n{}",
+                        serde_json::to_string_pretty(caller).expect("json value should serialize")
+                    )
+                }),
+            )
+        })
+        .collect();
+
+    // Verify stable ordering: callers sorted by (path, line)
+    for pair in locations.windows(2) {
+        assert!(
+            pair[0] <= pair[1],
+            "expected callers in stable (path, line) order: {pair:?}"
+        );
+    }
+}
+
+#[test]
+fn symbol_callers_preserves_second_hop_results_in_typed_output() {
+    let value = run_patch_json([
+        "symbol",
+        "callers",
+        "render",
+        "--scope",
+        "src/output",
+        "--json",
+    ]);
+    let impact = impact(&value);
+
+    assert!(
+        !impact.is_empty(),
+        "expected second-hop impact entries: {value:#}"
+    );
+
+    let first = &impact[0];
+    assert!(
+        first["path"].is_string(),
+        "expected impact path string: {first:#}"
+    );
+    assert!(
+        first["line"].is_u64(),
+        "expected impact line number: {first:#}"
+    );
+    assert!(
+        first["caller"].is_string(),
+        "expected impact caller string: {first:#}"
+    );
+    assert!(
+        first["via"].is_string(),
+        "expected impact via string: {first:#}"
+    );
+}
+
+#[test]
+fn symbol_callers_reports_warning_for_symbols_without_meaningful_callers_relation() {
+    let value = run_patch_json([
+        "symbol",
+        "callers",
+        "SymbolCommand",
+        "--scope",
+        "src",
+        "--json",
+    ]);
+    let callers = callers(&value);
+    let diagnostics = value["diagnostics"].as_array().unwrap_or_else(|| {
+        panic!(
+            "expected diagnostics array, got:\n{}",
+            serde_json::to_string_pretty(&value).expect("json value should serialize")
+        )
+    });
+
+    assert!(
+        callers.is_empty(),
+        "expected no call sites for non-callable relation: {value:#}"
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic["level"] == "warning"),
+        "expected warning diagnostic for non-meaningful callers relation: {value:#}"
+    );
+}

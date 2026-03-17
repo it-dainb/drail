@@ -1,0 +1,115 @@
+use std::path::Path;
+
+use serde::Serialize;
+
+use crate::cache::OutlineCache;
+use crate::error::PatchError;
+use crate::output::json::envelope::{Diagnostic, DiagnosticLevel};
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MapEntry {
+    pub path: String,
+    pub tokens: u64,
+    pub symbols: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MapData {
+    pub scope: String,
+    pub depth: usize,
+    pub total_files: usize,
+    pub total_tokens: u64,
+    pub entries: Vec<MapEntry>,
+    pub tree_text: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct MapCommandResult {
+    pub data: MapData,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+pub fn run(
+    scope: &Path,
+    depth: usize,
+    budget: Option<u64>,
+) -> Result<MapCommandResult, PatchError> {
+    let cache = OutlineCache::new();
+    let scope = scope.canonicalize().unwrap_or_else(|_| scope.to_path_buf());
+    let tree_text = crate::map::generate(&scope, depth, budget, &cache);
+
+    let entries = parse_map_entries(&tree_text);
+    let total_files = entries.len();
+    let total_tokens: u64 = entries.iter().map(|e| e.tokens).sum();
+
+    Ok(MapCommandResult {
+        data: MapData {
+            scope: scope.display().to_string(),
+            depth,
+            total_files,
+            total_tokens,
+            entries,
+            tree_text,
+        },
+        diagnostics: vec![Diagnostic {
+            level: DiagnosticLevel::Hint,
+            code: "no_diagnostics".into(),
+            message: "no diagnostics".into(),
+            suggestion: None,
+        }],
+    })
+}
+
+fn parse_map_entries(tree_text: &str) -> Vec<MapEntry> {
+    let mut entries = Vec::new();
+    for line in tree_text.lines() {
+        let trimmed = line.trim();
+        // Skip the header line
+        if trimmed.starts_with("# Map:") || trimmed.is_empty() {
+            continue;
+        }
+        // Skip directory lines (ending with /)
+        if trimmed.ends_with('/') {
+            continue;
+        }
+        // Parse file entries: "name: symbols" or "name (~N tokens)"
+        if let Some(tokens_entry) = parse_tokens_entry(trimmed) {
+            entries.push(tokens_entry);
+        } else if let Some(symbols_entry) = parse_symbols_entry(trimmed) {
+            entries.push(symbols_entry);
+        }
+    }
+    entries.sort_by(|a, b| a.path.cmp(&b.path));
+    entries
+}
+
+fn parse_tokens_entry(line: &str) -> Option<MapEntry> {
+    // Format: "name (~N tokens)"
+    let idx = line.find(" (~")?;
+    let name = line[..idx].trim().to_string();
+    let rest = &line[idx + 3..];
+    let tok_end = rest.find(" tokens)")?;
+    let tokens: u64 = rest[..tok_end].parse().ok()?;
+    Some(MapEntry {
+        path: name,
+        tokens,
+        symbols: vec![],
+    })
+}
+
+fn parse_symbols_entry(line: &str) -> Option<MapEntry> {
+    // Format: "name: sym1, sym2, ..."
+    let idx = line.find(": ")?;
+    let name = line[..idx].trim().to_string();
+    let syms_str = &line[idx + 2..];
+    let symbols: Vec<String> = syms_str
+        .split(", ")
+        .map(|s| s.trim_end_matches("...").trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    Some(MapEntry {
+        path: name,
+        tokens: 0,
+        symbols,
+    })
+}

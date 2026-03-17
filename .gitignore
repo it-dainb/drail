@@ -1,0 +1,34 @@
+# Build artifacts
+/target
+/result
+/result-*
+
+# Internal docs (reviews, feedback, specs)
+/docs
+!/docs/
+!/docs/cli-contract.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+
+# Python
+__pycache__/
+*.pyc
+
+# Benchmark
+benchmark/fixtures/repo/
+benchmark/fixtures/repos/
+benchmark/results/*.jsonl
+benchmark/results/*.md
+!benchmark/results/.gitkeep
+
+.hive/

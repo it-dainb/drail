@@ -1,0 +1,28 @@
+{
+  "name": "patch",
+  "version": "0.0.1",
+  "description": "Tree-sitter indexed lookups — smart code reading for AI agents",
+  "bin": {
+    "patch": "run.js"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "files": [
+    "install.js",
+    "run.js",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/it-dainb/patch.git"
+  },
+  "keywords": [
+    "mcp",
+    "code-search",
+    "tree-sitter",
+    "developer-tools",
+    "ai-agents"
+  ],
+  "license": "MIT"
+}
