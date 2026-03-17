@@ -97,10 +97,5 @@ fn diagnostics(
         }];
     }
 
-    vec![Diagnostic {
-        level: DiagnosticLevel::Hint,
-        code: "no_diagnostics".into(),
-        message: "no diagnostics".into(),
-        suggestion: None,
-    }]
+    Vec::new()
 }

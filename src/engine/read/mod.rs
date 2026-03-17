@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::cache::OutlineCache;
 use crate::error::PatchError;
-use crate::output::json::envelope::{Diagnostic, DiagnosticLevel};
+use crate::output::json::envelope::Diagnostic;
 
 #[derive(Debug, Clone)]
 pub enum ReadSelector {
@@ -75,11 +75,6 @@ pub fn run(
             selector,
             content,
         },
-        diagnostics: vec![Diagnostic {
-            level: DiagnosticLevel::Hint,
-            code: "no_diagnostics".into(),
-            message: "no diagnostics".into(),
-            suggestion: None,
-        }],
+        diagnostics: Vec::new(),
     })
 }
