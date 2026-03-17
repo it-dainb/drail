@@ -135,12 +135,7 @@ pub fn run(
             )),
         }]
     } else {
-        vec![Diagnostic {
-            level: DiagnosticLevel::Hint,
-            code: "no_diagnostics".into(),
-            message: "no diagnostics".into(),
-            suggestion: None,
-        }]
+        Vec::new()
     };
 
     let mut command_result = SymbolFindCommandResult { data, diagnostics };
@@ -268,12 +263,7 @@ fn callers_diagnostics(query: &str, scope: &Path) -> Result<Vec<Diagnostic>, Pat
         }]);
     }
 
-    Ok(vec![Diagnostic {
-        level: DiagnosticLevel::Hint,
-        code: "no_diagnostics".into(),
-        message: "no diagnostics".into(),
-        suggestion: None,
-    }])
+    Ok(Vec::new())
 }
 
 fn is_callable_definition(snippet: &str) -> bool {

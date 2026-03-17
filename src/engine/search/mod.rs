@@ -117,12 +117,7 @@ fn diagnostics(query: &str, scope: &Path, mode: SearchMode, total_found: usize) 
         }];
     }
 
-    vec![Diagnostic {
-        level: DiagnosticLevel::Hint,
-        code: "no_diagnostics".into(),
-        message: "no diagnostics".into(),
-        suggestion: None,
-    }]
+    Vec::new()
 }
 
 fn looks_like_slash_delimited_regex(query: &str) -> bool {
