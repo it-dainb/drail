@@ -6,7 +6,8 @@
     "patch": "run.js"
   },
   "scripts": {
-    "postinstall": "node install.js"
+    "postinstall": "node install.js",
+    "sync-version": "node ../scripts/sync-npm-version.js"
   },
   "files": [
     "install.js",

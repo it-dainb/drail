@@ -17,10 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Sync npm version from Cargo.toml
+        run: node scripts/sync-npm-version.js
       - name: Verify versions match tag
         run: |
           TAG="${GITHUB_REF#refs/tags/v}"
-          CARGO_VER=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          CARGO_VER=$(node scripts/sync-npm-version.js --print)
           NPM_VER=$(node -p "require('./npm/package.json').version")
           echo "Tag: $TAG  Cargo: $CARGO_VER  npm: $NPM_VER"
           if [ "$CARGO_VER" != "$TAG" ]; then
@@ -127,6 +129,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Sync npm version from Cargo.toml
+        run: node scripts/sync-npm-version.js
       - uses: actions/setup-node@v4
         with:
           node-version: 24
