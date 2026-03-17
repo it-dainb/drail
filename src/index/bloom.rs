@@ -261,7 +261,10 @@ impl<'a> Iterator for IdentifierIter<'a> {
                         self.pos += 1;
                         continue;
                     }
-                    if b == b'\'' && !bytes.get(i + 1).is_some_and(|next| is_ident_start(*next)) {
+                    if b == b'\''
+                        && (!bytes.get(i + 1).is_some_and(|next| is_ident_start(*next))
+                            || bytes.get(i + 2) == Some(&b'\''))
+                    {
                         self.state = ScanState::StringSingle;
                         self.pos += 1;
                         continue;
