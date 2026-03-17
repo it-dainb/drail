@@ -40,7 +40,7 @@ impl BloomFilter {
     /// # Examples
     ///
     /// ```
-    /// use patch::index::bloom::BloomFilter;
+    /// use pm_patch::index::bloom::BloomFilter;
     ///
     /// let bf = BloomFilter::new(100, 0.01);
     /// assert!(!bf.contains("hello"));
