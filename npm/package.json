@@ -5,6 +5,9 @@
   "bin": {
     "patch": "run.js"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "postinstall": "node install.js",
     "sync-version": "node ../scripts/sync-npm-version.js"
