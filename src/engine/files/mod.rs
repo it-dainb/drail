@@ -35,17 +35,17 @@ pub fn run(
     let mut command_result = FilesCommandResult {
         data: FilesData {
             pattern: pattern.to_string(),
-            scope: scope.display().to_string(),
+            scope: crate::format::path_to_string(&scope),
             files: result
                 .files
                 .into_iter()
                 .map(|entry| FileMatch {
-                    path: entry
-                        .path
-                        .strip_prefix(&scope)
-                        .unwrap_or(entry.path.as_path())
-                        .display()
-                        .to_string(),
+                    path: crate::format::path_to_string(
+                        entry
+                            .path
+                            .strip_prefix(&scope)
+                            .unwrap_or(entry.path.as_path()),
+                    ),
                     preview: entry.preview.unwrap_or_else(|| "(no preview)".into()),
                 })
                 .collect(),

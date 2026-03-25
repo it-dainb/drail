@@ -64,18 +64,18 @@ fn run(
     let mut command_result = SearchCommandResult {
         data: SearchData {
             query: query.to_string(),
-            scope: scope.display().to_string(),
+            scope: crate::format::path_to_string(&scope),
             mode,
             matches: result
                 .matches
                 .into_iter()
                 .map(|entry| SearchMatch {
-                    path: entry
-                        .path
-                        .strip_prefix(&scope)
-                        .unwrap_or(entry.path.as_path())
-                        .display()
-                        .to_string(),
+                    path: crate::format::path_to_string(
+                        entry
+                            .path
+                            .strip_prefix(&scope)
+                            .unwrap_or(entry.path.as_path()),
+                    ),
                     line: entry.line as usize,
                     text: entry.text,
                 })

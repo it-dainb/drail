@@ -93,12 +93,12 @@ pub fn run(
             None => true,
         })
         .map(|candidate| SymbolMatch {
-            path: candidate
-                .path
-                .strip_prefix(&scope)
-                .unwrap_or(candidate.path.as_path())
-                .display()
-                .to_string(),
+            path: crate::format::path_to_string(
+                candidate
+                    .path
+                    .strip_prefix(&scope)
+                    .unwrap_or(candidate.path.as_path()),
+            ),
             kind: if candidate.is_definition {
                 SymbolMatchKind::Definition
             } else {
@@ -120,7 +120,7 @@ pub fn run(
 
     let data = SymbolFindData {
         query: query.to_string(),
-        scope: scope.display().to_string(),
+        scope: crate::format::path_to_string(&scope),
         kind: kind_filter,
         matches,
     };
@@ -164,17 +164,17 @@ pub fn run_callers(
     let mut command_result = SymbolCallersCommandResult {
         data: SymbolCallersData {
             query: query.to_string(),
-            scope: scope.display().to_string(),
+            scope: crate::format::path_to_string(&scope),
             callers: result
                 .callers
                 .into_iter()
                 .map(|caller| SymbolCaller {
-                    path: caller
-                        .path
-                        .strip_prefix(&scope)
-                        .unwrap_or(caller.path.as_path())
-                        .display()
-                        .to_string(),
+                    path: crate::format::path_to_string(
+                        caller
+                            .path
+                            .strip_prefix(&scope)
+                            .unwrap_or(caller.path.as_path()),
+                    ),
                     line: caller.line as usize,
                     caller: caller.caller,
                     call_text: caller.call_text,
@@ -184,12 +184,12 @@ pub fn run_callers(
                 .impact
                 .into_iter()
                 .map(|entry| SymbolCallerImpact {
-                    path: entry
-                        .path
-                        .strip_prefix(&scope)
-                        .unwrap_or(entry.path.as_path())
-                        .display()
-                        .to_string(),
+                    path: crate::format::path_to_string(
+                        entry
+                            .path
+                            .strip_prefix(&scope)
+                            .unwrap_or(entry.path.as_path()),
+                    ),
                     line: entry.line as usize,
                     caller: entry.caller,
                     via: entry.via,

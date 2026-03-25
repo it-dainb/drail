@@ -71,7 +71,7 @@ pub fn run(
 
     Ok(ReadCommandResult {
         data: ReadResultData {
-            path: path.display().to_string(),
+            path: crate::format::path_to_string(path),
             selector,
             content,
         },

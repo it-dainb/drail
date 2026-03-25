@@ -4,6 +4,10 @@ use std::path::{Path, PathBuf};
 use std::process::{Command as ProcessCommand, Output};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[path = "common/mod.rs"]
+mod common;
+use common::{bash_executable, bash_path};
+
 use assert_cmd::Command;
 use serde_json::Value;
 
@@ -57,7 +61,7 @@ impl Drop for TempDir {
 }
 
 fn run_install(home: &Path, path_env: &str, dry_run: bool) -> Output {
-    let mut command = ProcessCommand::new("bash");
+    let mut command = ProcessCommand::new(bash_executable());
     command.arg(repo_root().join("install.sh"));
     command.current_dir(repo_root());
     command.env("HOME", home);
@@ -278,6 +282,6 @@ fn installer_dry_run_example_from_readme_stays_valid() {
     let text = stdout(&output);
 
     assert_success(&output);
-    assert_contains(&text, &format!("{}/.local/bin/patch", home.display()));
+    assert_contains(&text, &format!("{}/.local/bin/patch", bash_path(&home)));
     assert_contains(&text, "Add this directory to your PATH");
 }

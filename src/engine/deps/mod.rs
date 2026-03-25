@@ -58,23 +58,23 @@ pub fn run(path: &Path, scope: &Path) -> Result<DepsCommandResult, PatchError> {
 
     Ok(DepsCommandResult {
         data: DepsData {
-            path: result
-                .target
-                .strip_prefix(&scope)
-                .unwrap_or(result.target.as_path())
-                .display()
-                .to_string(),
-            scope: scope.display().to_string(),
+            path: crate::format::path_to_string(
+                result
+                    .target
+                    .strip_prefix(&scope)
+                    .unwrap_or(result.target.as_path()),
+            ),
+            scope: crate::format::path_to_string(&scope),
             uses_local: result
                 .uses_local
                 .into_iter()
                 .map(|dependency| LocalDependency {
-                    path: dependency
-                        .path
-                        .strip_prefix(&scope)
-                        .unwrap_or(dependency.path.as_path())
-                        .display()
-                        .to_string(),
+                    path: crate::format::path_to_string(
+                        dependency
+                            .path
+                            .strip_prefix(&scope)
+                            .unwrap_or(dependency.path.as_path()),
+                    ),
                     symbols: dependency.symbols,
                 })
                 .collect(),
@@ -116,12 +116,12 @@ pub fn run(path: &Path, scope: &Path) -> Result<DepsCommandResult, PatchError> {
                     });
 
                     ReverseDependency {
-                        path: dependency
-                            .path
-                            .strip_prefix(&scope)
-                            .unwrap_or(dependency.path.as_path())
-                            .display()
-                            .to_string(),
+                        path: crate::format::path_to_string(
+                            dependency
+                                .path
+                                .strip_prefix(&scope)
+                                .unwrap_or(dependency.path.as_path()),
+                        ),
                         is_test: dependency.is_test,
                         callers,
                     }

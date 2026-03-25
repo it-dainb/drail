@@ -3,6 +3,21 @@ use std::path::Path;
 
 use crate::types::{estimate_tokens, ViewMode};
 
+/// Convert a path to a forward-slash string for output.
+///
+/// On Windows, strips the `\\?\` extended-length path prefix (produced by
+/// `Path::canonicalize`) and replaces backslashes with forward slashes.
+/// On other platforms, equivalent to `path.display().to_string()`.
+pub fn path_to_string(path: &Path) -> String {
+    let s = path.display().to_string();
+    if cfg!(windows) {
+        let stripped = s.strip_prefix(r"\\?\").unwrap_or(&s);
+        stripped.replace('\\', "/")
+    } else {
+        s
+    }
+}
+
 /// Build the standard header line:
 /// `# path/to/file.ts (N lines, ~X.Xk tokens) [mode]`
 pub fn file_header(path: &Path, byte_len: u64, line_count: u32, mode: ViewMode) -> String {

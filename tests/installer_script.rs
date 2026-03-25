@@ -4,6 +4,10 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[path = "common/mod.rs"]
+mod common;
+use common::{bash_executable, bash_path};
+
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
@@ -46,7 +50,7 @@ impl Drop for TempDir {
 }
 
 fn run_install(home: &Path, path_env: &str, dry_run: bool, extra_env: &[(&str, &str)]) -> Output {
-    let mut command = Command::new("bash");
+    let mut command = Command::new(bash_executable());
     command.arg(script_path());
     command.current_dir(repo_root());
     command.env("HOME", home);
@@ -97,7 +101,7 @@ fn dry_run_defaults_to_home_local_bin_and_prints_path_guidance_when_missing() {
     let text = stdout(&output);
 
     assert_success(&output);
-    assert!(text.contains(&format!("{}/.local/bin/patch", home.display())));
+    assert!(text.contains(&format!("{}/.local/bin/patch", bash_path(&home))));
     assert!(
         text.contains("Add this directory to your PATH"),
         "stdout:\n{text}"
@@ -122,8 +126,8 @@ fn dry_run_honors_install_dir_override_and_omits_path_guidance_when_already_pres
     let install_dir = temp.path().join("bin");
     fs::create_dir_all(&home).expect("home should exist");
 
-    let path_env = format!("{}:/usr/bin", install_dir.display());
-    let install_dir_value = install_dir.to_string_lossy().into_owned();
+    let path_env = format!("{}:/usr/bin", bash_path(&install_dir));
+    let install_dir_value = bash_path(&install_dir);
     let output = run_install(
         &home,
         &path_env,
@@ -133,7 +137,7 @@ fn dry_run_honors_install_dir_override_and_omits_path_guidance_when_already_pres
     let text = stdout(&output);
 
     assert_success(&output);
-    assert!(text.contains(&format!("{}/patch", install_dir.display())));
+    assert!(text.contains(&format!("{}/patch", bash_path(&install_dir))));
     assert_not_contains(&text, "Add this directory to your PATH");
     assert_not_contains(&text, "MCP");
 }
@@ -151,7 +155,7 @@ fn dry_run_is_side_effect_free_even_when_target_exists() {
     let text = stdout(&output);
 
     assert_success(&output);
-    assert!(text.contains(&format!("{}/.local/bin/patch", home.display())));
+    assert!(text.contains(&format!("{}/.local/bin/patch", bash_path(&home))));
     assert_eq!(
         fs::read_to_string(&target).expect("target should remain readable"),
         "old"
@@ -171,7 +175,7 @@ fn rerunning_replaces_existing_target_idempotently() {
     fs::write(&source_one, "first-binary").expect("first source should exist");
     fs::write(&source_two, "second-binary").expect("second source should exist");
 
-    let source_one_value = source_one.to_string_lossy().into_owned();
+    let source_one_value = bash_path(&source_one);
     let first = run_install(
         &home,
         "/usr/bin",
@@ -184,7 +188,7 @@ fn rerunning_replaces_existing_target_idempotently() {
         "first-binary"
     );
 
-    let source_two_value = source_two.to_string_lossy().into_owned();
+    let source_two_value = bash_path(&source_two);
     let second = run_install(
         &home,
         "/usr/bin",
