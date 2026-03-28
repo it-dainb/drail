@@ -1,6 +1,6 @@
 {
   "name": "@it.dainb/pm-patch",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Tree-sitter indexed lookups — smart code reading for AI agents",
   "bin": {
     "patch": "run.js"
