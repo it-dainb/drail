@@ -47,7 +47,7 @@ fn next_for_read(
                 format!("Read the full markdown section starting at line {start} with --heading"),
                 format!(
                     "patch read {:?} --heading {:?}",
-                    path.display().to_string(),
+                    crate::format::path_to_string(path),
                     heading_line
                 ),
             )]
@@ -166,7 +166,7 @@ fn meta_for_read(
         }
     };
 
-    meta.insert("path".into(), json!(path.display().to_string()));
+    meta.insert("path".into(), json!(crate::format::path_to_string(path)));
     meta.insert("selector_kind".into(), json!(selector_kind));
     meta.insert("selector_display".into(), json!(selector_display));
     meta.insert("file_kind".into(), json!(file_kind_label(path)));

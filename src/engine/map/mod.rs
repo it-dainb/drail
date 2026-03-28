@@ -52,7 +52,7 @@ pub fn run(
 
     Ok(MapCommandResult {
         data: MapData {
-            scope: scope.display().to_string(),
+            scope: crate::format::path_to_string(&scope),
             depth,
             total_files,
             total_tokens,
