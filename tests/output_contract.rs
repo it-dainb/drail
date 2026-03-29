@@ -348,6 +348,28 @@ fn successful_commands_do_not_emit_placeholder_success_diagnostics() {
 }
 
 #[test]
+fn json_no_placeholder_success_diagnostics() {
+    let value = run_drail_json(["read", "tests/fixtures/minified/app.min.js", "--json"]);
+
+    assert_v2_envelope(&value, "read");
+    assert_eq!(value["ok"], true, "expected successful envelope: {value:#}");
+
+    let diagnostics = diagnostics(&value, "read");
+    assert!(
+        diagnostics
+            .iter()
+            .any(|item| item["level"] == "warning" && item["code"] == "minified_fallback_used"),
+        "expected real fallback warning diagnostic: {value:#}"
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .all(|item| !(item["level"] == "hint" && item["code"] == "success")),
+        "expected no placeholder success diagnostics in successful JSON output: {value:#}"
+    );
+}
+
+#[test]
 fn text_output_renders_none_for_empty_next_and_diagnostics() {
     let output = run_drail(["map", "--scope", "src"]);
 
