@@ -78,10 +78,7 @@ pub fn run(
                     all_diagnostics.push(Diagnostic {
                         level: DiagnosticLevel::Hint,
                         code: "no_scan_matches".into(),
-                        message: format!(
-                            "no files or matches found in scope {}",
-                            scope.display()
-                        ),
+                        message: format!("no files or matches found in scope {}", scope.display()),
                         suggestion: None,
                     });
                 }
@@ -162,8 +159,7 @@ fn run_scope(
             .collect::<Vec<_>>()
             .join("|");
 
-        let search_result =
-            crate::search::content::search(&combined, scope, true, None)?;
+        let search_result = crate::search::content::search(&combined, scope, true, None)?;
 
         // Post-filter: only keep matches in the glob-matched file set
         let matched_paths: HashSet<&str> = files.iter().map(|f| f.path.as_str()).collect();

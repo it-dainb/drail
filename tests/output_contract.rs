@@ -254,7 +254,14 @@ fn schema_version_is_2_for_all_json_commands() {
         ),
         (vec!["map", "--scope", "src", "--json"], "map"),
         (
-            vec!["scan", "--scope", "src/commands", "--files", "*.rs", "--json"],
+            vec![
+                "scan",
+                "--scope",
+                "src/commands",
+                "--files",
+                "*.rs",
+                "--json",
+            ],
             "scan",
         ),
     ];
@@ -341,7 +348,14 @@ fn successful_commands_do_not_emit_placeholder_success_diagnostics() {
         ),
         (vec!["map", "--scope", "src", "--json"], "map"),
         (
-            vec!["scan", "--scope", "src/commands", "--files", "*.rs", "--json"],
+            vec![
+                "scan",
+                "--scope",
+                "src/commands",
+                "--files",
+                "*.rs",
+                "--json",
+            ],
             "scan",
         ),
     ];

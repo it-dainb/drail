@@ -7,11 +7,7 @@ pub fn render(result: &ScanCommandResult) -> String {
     let mut output = String::new();
 
     let total_scopes = result.data.scopes.len();
-    let total_patterns: usize = result
-        .data
-        .scopes
-        .first()
-        .map_or(0, |s| s.pattern_count);
+    let total_patterns: usize = result.data.scopes.first().map_or(0, |s| s.pattern_count);
     let total_files: usize = result.data.scopes.iter().map(|s| s.total_files).sum();
 
     let _ = write!(

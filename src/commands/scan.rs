@@ -45,11 +45,7 @@ fn meta_for_scan(result: &scan::ScanCommandResult) -> Map<String, Value> {
 }
 
 fn next_for_scan(result: &scan::ScanCommandResult) -> Vec<NextItem> {
-    let has_summaries = result
-        .data
-        .scopes
-        .iter()
-        .any(|s| s.total_summaries > 0);
+    let has_summaries = result.data.scopes.iter().any(|s| s.total_summaries > 0);
 
     if has_summaries {
         vec![crate::output::suggestion(

@@ -422,6 +422,12 @@ cargo clippy -- -D warnings
 cargo fmt --check
 ```
 
+Enable the pre-commit hook to catch formatting issues before push:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Stability promises
 
 drail aims to keep these surfaces stable:

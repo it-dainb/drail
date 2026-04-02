@@ -121,13 +121,7 @@ fn scan_multi_pattern_ored() {
 #[test]
 fn scan_multi_glob() {
     let output = run_drail([
-        "scan",
-        "--scope",
-        "src",
-        "--files",
-        "*.rs",
-        "--files",
-        "*.toml",
+        "scan", "--scope", "src", "--files", "*.rs", "--files", "*.toml",
     ]);
     assert_success(&output);
     let text = stdout(&output);
