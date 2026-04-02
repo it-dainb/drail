@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 set -e
 
-# Run cargo fmt check — reject commits with unformatted Rust code
-if command -v cargo >/dev/null 2>&1; then
-    echo "pre-commit: running cargo fmt --check..."
-    cargo fmt --check
+if ! command -v cargo >/dev/null 2>&1; then
+    exit 0
 fi
+
+# Ensure Cargo.lock is in sync with Cargo.toml
+# CI uses --locked, so a stale lockfile breaks the build
+if git diff --cached --name-only | grep -q 'Cargo.toml'; then
+    echo "pre-commit: Cargo.toml changed, syncing Cargo.lock..."
+    cargo check --quiet 2>/dev/null
+    git add Cargo.lock
+fi
+
+# Reject commits with unformatted Rust code
+echo "pre-commit: running cargo fmt --check..."
+cargo fmt --check
