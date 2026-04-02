@@ -93,6 +93,7 @@ fn help_lists_only_current_command_families() {
     assert_contains(&text, "files");
     assert_contains(&text, "deps");
     assert_contains(&text, "map");
+    assert_contains(&text, "scan");
     assert!(
         !text.contains("install") && !text.contains("mcp"),
         "expected help text to stay CLI-only, got:\n{text}"

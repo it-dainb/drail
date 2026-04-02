@@ -26,6 +26,7 @@ pub enum Command {
     Files(FilesArgs),
     Deps(DepsArgs),
     Map(MapArgs),
+    Scan(ScanArgs),
 }
 
 #[derive(Debug, Args)]
@@ -150,6 +151,28 @@ pub struct MapArgs {
 
     #[arg(long, default_value_t = 3)]
     pub depth: usize,
+
+    #[arg(long)]
+    pub budget: Option<u64>,
+}
+
+#[derive(Debug, Args)]
+pub struct ScanArgs {
+    /// Directory scopes to scan (at least one required)
+    #[arg(long, required = true, num_args = 1..)]
+    pub scope: Vec<PathBuf>,
+
+    /// Regex patterns to search for (OR'd together)
+    #[arg(long)]
+    pub pattern: Vec<String>,
+
+    /// Glob patterns to filter files (OR'd together)
+    #[arg(long)]
+    pub files: Vec<String>,
+
+    /// Auto-read files with pattern matches, showing structural outlines
+    #[arg(long)]
+    pub read_matching: bool,
 
     #[arg(long)]
     pub budget: Option<u64>,

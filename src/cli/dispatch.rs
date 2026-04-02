@@ -15,6 +15,7 @@ pub fn run(cli: &Cli) -> Result<(), DrailError> {
         Command::Files(ref args) => commands::files::run(args)?,
         Command::Deps(ref args) => commands::deps::run(args)?,
         Command::Map(ref args) => commands::map::run(args)?,
+        Command::Scan(ref args) => commands::scan::run(args)?,
     };
 
     output::write(&rendered, cli.json, std::io::stdout().is_terminal());
@@ -32,5 +33,6 @@ pub fn command_name(command: &Command) -> &'static str {
         Command::Files(_) => "files",
         Command::Deps(_) => "deps",
         Command::Map(_) => "map",
+        Command::Scan(_) => "scan",
     }
 }

@@ -131,4 +131,6 @@ jobs:
           registry-url: https://registry.npmjs.org
       - name: Update npm
         run: npm install -g npm@latest
+      - name: Copy README into npm package
+        run: cp README.md npm/README.md
       - run: npm publish ./npm

@@ -14,6 +14,7 @@ The supported top-level commands are:
 - `files`
 - `deps`
 - `map`
+- `scan`
 
 There is no query-shorthand mode, no MCP runtime, and no editor/host install flow.
 
@@ -35,7 +36,7 @@ When a command accepts `--scope <dir>`, drail may read one `.drailignore` file f
 
 drail does not look up parent directories for additional ignore rules, does not merge nested `.drailignore` files, and .gitignore is not read.
 
-Traversal commands honor that file. Traversal commands honor that file: `files`, `symbol find`, `symbol callers`, `search text`, `search regex`, `deps`, and `map`.
+Traversal commands honor that file. Traversal commands honor that file: `files`, `symbol find`, `symbol callers`, `search text`, `search regex`, `deps`, `map`, and `scan`.
 
 Scope behavior stays explicit:
 
@@ -165,6 +166,7 @@ Each command stores its structured payload under `data`.
 - `files`: `files`
 - `deps`: `uses_local`, `uses_external`, `used_by`
 - `map`: `entries`, `total_files`
+- `scan`: `scopes` (array of scope objects with `files`, `matches`, `summaries`); `meta` includes `scopes`, `total_files`, `total_matches`, `total_summaries`
 
 ### `read` selector contract
 
@@ -217,6 +219,29 @@ That means drail does **not** emit the heading suggestion when:
 - a heading appears later in the selected range
 - the selection starts inside section body text
 - the selection starts before a heading
+
+### Scan composite command
+
+`scan` composes file discovery, pattern search, and outline generation into a single call. It accepts:
+
+- `--scope <dir>` (required, repeatable): one or more directories to scan
+- `--files <glob>` (optional, repeatable): file glob filters; defaults to all files when omitted
+- `--pattern <regex>` (optional, repeatable): content patterns; multiple patterns are OR-combined
+- `--read-matching`: generate outlines for files with pattern matches
+- `--budget <bytes>`: cap serialized output size via tiered trimming (summaries first, then matches, then files)
+
+Each scope produces a `ScanScopeData` object with:
+
+- `scope`: resolved path
+- `pattern_count`: number of patterns supplied
+- `total_files`, `total_matches`, `total_summaries`: counts before budget trimming
+- `files`: list of `{path, preview}` entries
+- `matches`: list of `{path, line, text}` entries (only when patterns given)
+- `summaries`: list of `{path, lines, outline}` entries (only when `--read-matching`)
+
+Scopes are sorted by path for deterministic output. Missing scopes emit a `scope_not_found` error diagnostic and are skipped. Empty scopes (no files or matches) emit a `no_scan_matches` hint diagnostic.
+
+Text output renders per-scope sections with `[scope: <path>]` headers, followed by `files (N):`, `matches (N):`, and `read-summaries (N):` subsections. Budget-trimmed sections show `(trimmed)`.
 
 ## Maintenance rule
 

@@ -253,6 +253,10 @@ fn schema_version_is_2_for_all_json_commands() {
             "deps",
         ),
         (vec!["map", "--scope", "src", "--json"], "map"),
+        (
+            vec!["scan", "--scope", "src/commands", "--files", "*.rs", "--json"],
+            "scan",
+        ),
     ];
 
     for (args, command) in cases {
@@ -270,6 +274,7 @@ fn text_output_uses_v2_section_order() {
         vec!["symbol", "find", "main", "--scope", "src"],
         vec!["deps", "src/commands/deps.rs", "--scope", "src"],
         vec!["map", "--scope", "src"],
+        vec!["scan", "--scope", "src/commands", "--files", "*.rs"],
     ];
 
     for args in cases {
@@ -335,6 +340,10 @@ fn successful_commands_do_not_emit_placeholder_success_diagnostics() {
             "files",
         ),
         (vec!["map", "--scope", "src", "--json"], "map"),
+        (
+            vec!["scan", "--scope", "src/commands", "--files", "*.rs", "--json"],
+            "scan",
+        ),
     ];
 
     for (args, command) in cases {

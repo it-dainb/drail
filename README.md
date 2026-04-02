@@ -29,6 +29,7 @@ drail search regex <pattern>
 drail files <pattern>
 drail deps <path>
 drail map
+drail scan --scope <dir> [--files <glob>...] [--pattern <regex>...] [--read-matching] [--budget <bytes>]
 ```
 
 Every command supports:
@@ -43,7 +44,7 @@ Scope-aware commands also accept `--scope <dir>`.
 
 When you pass `--scope <dir>`, drail reads at most one `.drailignore` file from the active scope root itself. drail does not look in parent directories, and it does not merge multiple ignore files.
 
-Traversal commands honor that scope-root `.drailignore`: `files`, `symbol find`, `symbol callers`, `search text`, `search regex`, `deps`, and `map`.
+Traversal commands honor that scope-root `.drailignore`: `files`, `symbol find`, `symbol callers`, `search text`, `search regex`, `deps`, `map`, and `scan`.
 
 Supported launch syntax is unchanged: point `--scope` at the directory whose root contains the `.drailignore` file you want honored.
 
@@ -165,6 +166,27 @@ cargo run -- map --scope src
 ```
 
 Use `map` once when entering an unfamiliar repo, then switch to targeted commands.
+
+### `scan`
+
+Composite command that combines file discovery, pattern search, and outline generation in a single call. Designed to replace multi-step agent loops (files + search + read) with one invocation.
+
+```bash
+cargo run -- scan --scope src/commands --files "*.rs"
+cargo run -- scan --scope src/commands --files "*.rs" --pattern "pub fn run"
+cargo run -- scan --scope src/commands --scope src/output --files "*.rs" --pattern "pub fn run" --read-matching
+cargo run -- scan --scope src --files "*.rs" --pattern "pub fn run" --read-matching --budget 2000
+```
+
+Flags:
+
+- `--scope <dir>` (required, repeatable): directories to scan
+- `--files <glob>` (repeatable): file glob filters; defaults to all files
+- `--pattern <regex>` (repeatable): content patterns; multiple are OR-combined
+- `--read-matching`: generate structural outlines for files with matches
+- `--budget <bytes>`: cap output size; trims summaries first, then matches, then files
+
+Use `scan` when you need to discover files, search their content, and read outlines in one shot instead of chaining `files` + `search` + `read`.
 
 ## Output philosophy
 
@@ -353,10 +375,12 @@ Current output limits are intentionally strict:
 For an unfamiliar codebase:
 
 1. `map --scope src`
-2. `files "*.rs" --scope src`
-3. `symbol find <target> --scope src`
-4. `symbol callers <target> --scope src` before signature changes
-5. `read <path>` only after you know the exact file or section you need
+2. `scan --scope src --files "*.rs" --pattern "<target>" --read-matching` to discover, search, and outline in one call
+3. `read <path>` only after you know the exact file or section you need
+
+For a targeted investigation across a directory:
+
+1. `scan --scope <dir> --files "*.rs" --pattern "<query>" --read-matching` replaces the sequence of `files` + `search` + `read`
 
 For a likely text match rather than a symbol:
 

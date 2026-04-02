@@ -32,3 +32,6 @@ benchmark/results/*.md
 !benchmark/results/.gitkeep
 
 .hive/
+
+# npm README is copied from root by CI, not maintained separately
+npm/README.md
