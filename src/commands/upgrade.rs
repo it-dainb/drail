@@ -5,12 +5,13 @@ use serde_json::{json, Map, Value};
 
 use crate::cli::args::UpgradeArgs;
 use crate::commands::install_helpers::{
-    self, current_binary_path, default_binary_path, detect_targets, detected_label,
-    install_global_config, install_skill_files, select_targets, verify_global_config,
-    verify_skill_files, Detection, Selection, DRAIL_VERSION,
+    self, detect_targets, detected_label, install_global_config, install_skill_files,
+    select_targets, verify_global_config, verify_skill_files, Detection, Selection, DRAIL_VERSION,
 };
 use crate::error::DrailError;
 use crate::output::CommandOutput;
+
+const RELEASES_URL: &str = "https://github.com/it-dainb/drail/releases/latest";
 
 pub fn run(args: &UpgradeArgs) -> Result<CommandOutput, DrailError> {
     let bin_result = upgrade_binary()?;
@@ -49,6 +50,7 @@ pub fn run(args: &UpgradeArgs) -> Result<CommandOutput, DrailError> {
             "previous_version": DRAIL_VERSION,
             "new_version": new_version,
             "binary_upgraded": bin_result.upgraded,
+            "up_to_date": bin_result.up_to_date,
             "method": bin_result.method,
             "detected": detection.detected_names(),
             "selected": selection.selected_names(),
@@ -63,34 +65,72 @@ pub fn run(args: &UpgradeArgs) -> Result<CommandOutput, DrailError> {
 
 struct BinaryUpgradeResult {
     upgraded: bool,
+    up_to_date: bool,
     method: &'static str,
     new_version: String,
 }
 
+/// Fetch the latest release version from GitHub releases.
+/// Returns `None` if the check fails (no network, curl missing, etc.).
+fn fetch_latest_version() -> Option<String> {
+    let output = process::Command::new("curl")
+        .args(["-sI", RELEASES_URL])
+        .stderr(process::Stdio::null())
+        .output()
+        .ok()?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        let lower = line.to_lowercase();
+        if let Some(rest) = lower.strip_prefix("location:") {
+            let url = rest.trim();
+            if let Some(tag) = url.rsplit('/').next() {
+                return Some(tag.strip_prefix('v').unwrap_or(tag).to_string());
+            }
+        }
+    }
+    None
+}
+
 fn upgrade_binary() -> Result<BinaryUpgradeResult, DrailError> {
-    // Try cargo install first (works for cargo-installed binaries)
-    if try_cargo_install()? {
-        let version = get_new_version()?;
+    let latest = fetch_latest_version();
+
+    // Already up-to-date?
+    if let Some(ref v) = latest {
+        if v == DRAIL_VERSION {
+            return Ok(BinaryUpgradeResult {
+                upgraded: false,
+                up_to_date: true,
+                method: "none",
+                new_version: DRAIL_VERSION.to_string(),
+            });
+        }
+    }
+
+    // Try npm first (preferred — prebuilt binary, faster)
+    if try_npm_update()? {
         return Ok(BinaryUpgradeResult {
             upgraded: true,
-            method: "cargo",
-            new_version: version,
+            up_to_date: false,
+            method: "npm",
+            new_version: latest.clone().unwrap_or_else(|| DRAIL_VERSION.to_string()),
         });
     }
 
-    // Try npm update (works for npm-installed binaries)
-    if try_npm_update()? {
-        let version = get_new_version()?;
+    // Fall back to cargo install (compiles from source)
+    if try_cargo_install()? {
         return Ok(BinaryUpgradeResult {
             upgraded: true,
-            method: "npm",
-            new_version: version,
+            up_to_date: false,
+            method: "cargo",
+            new_version: latest.unwrap_or_else(|| DRAIL_VERSION.to_string()),
         });
     }
 
     // No upgrade method available — just update skills with current version
     Ok(BinaryUpgradeResult {
         upgraded: false,
+        up_to_date: false,
         method: "none",
         new_version: DRAIL_VERSION.to_string(),
     })
@@ -122,25 +162,6 @@ fn try_npm_update() -> Result<bool, DrailError> {
     }
 }
 
-fn get_new_version() -> Result<String, DrailError> {
-    let bin_path = current_binary_path().unwrap_or_else(default_binary_path);
-
-    let output = process::Command::new(&bin_path)
-        .arg("--version")
-        .output()
-        .map_err(|source| DrailError::IoError {
-            path: bin_path,
-            source,
-        })?;
-
-    let version_text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    // Parse "drail X.Y.Z" -> "X.Y.Z"
-    Ok(version_text
-        .strip_prefix("drail ")
-        .unwrap_or(&version_text)
-        .to_string())
-}
-
 fn render_text(
     detection: &Detection,
     selection: &Selection,
@@ -150,11 +171,13 @@ fn render_text(
     use std::fmt::Write as _;
     let mut text = String::new();
 
-    if bin_result.upgraded {
+    if bin_result.up_to_date {
+        let _ = write!(text, "Already up-to-date (v{DRAIL_VERSION})");
+    } else if bin_result.upgraded {
         let _ = write!(
             text,
-            "Binary upgraded via {}: {} -> {new_version}",
-            bin_result.method, DRAIL_VERSION
+            "Binary upgraded via {}: {DRAIL_VERSION} -> {}",
+            bin_result.method, new_version
         );
     } else {
         let _ = write!(
@@ -191,6 +214,7 @@ fn meta_for_upgrade(
     meta.insert("detected".into(), json!(detection.detected_names()));
     meta.insert("upgraded".into(), json!(selection.selected_names()));
     meta.insert("binary_upgraded".into(), json!(bin_result.upgraded));
+    meta.insert("up_to_date".into(), json!(bin_result.up_to_date));
     meta.insert("method".into(), json!(bin_result.method));
     meta.insert("stability".into(), json!("high"));
     meta.insert("noise".into(), json!("low"));
