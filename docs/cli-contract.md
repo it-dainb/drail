@@ -80,7 +80,7 @@ Each `next` item uses this shape:
 {
   "kind": "suggestion",
   "message": "Read the full markdown section starting at line 7 with --heading",
-  "command": "drail read \"README.md\" --heading \"## Why drail exists\"",
+  "command": "drail read \"README.md\" --heading \"## Quick Start\"",
   "confidence": "high"
 }
 ```
@@ -181,7 +181,7 @@ For `read`, `data.meta` and `data.selector` expose a stable selector contract.
 `data.selector` retains enum-tagged serialization variants:
 
 - `{"Lines": {"start": 7, "end": 17}}`
-- `{"Heading": {"value": "## Command families"}}`
+- `{"Heading": {"value": "## Commands"}}`
 - `{"Key": {"value": "users.0.accounts"}}`
 - `{"Index": {"start": 0, "end": 1}}`
 - `{"KeyIndex": {"value": "users.0.accounts", "start": 0, "end": 1}}`

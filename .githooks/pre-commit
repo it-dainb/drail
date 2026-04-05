@@ -16,3 +16,7 @@ fi
 # Reject commits with unformatted Rust code
 echo "pre-commit: running cargo fmt --check..."
 cargo fmt --check
+
+# Run tests
+echo "pre-commit: running cargo test..."
+cargo test --quiet

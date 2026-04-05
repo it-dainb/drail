@@ -79,10 +79,10 @@ All commands support:
 
 ### Output structure
 
-Every command returns 4 sections: **Meta** (query info), **Evidence** (your answer), **Next** (recovery suggestions), **Diagnostics** (warnings/errors). Empty sections render as `(none)`.
+Every command returns 4 sections: **Meta** (query info), **Evidence** (your answer), **Next** (recovery suggestions), **Diagnostics** (warnings/errors). Empty sections render as `(none)`. Errors follow the same structure on stderr.
 
 <details>
-<summary><b>Output example</b></summary>
+<summary><b>Text output example</b></summary>
 
 ```text
 # symbol.find
@@ -106,12 +106,61 @@ symbol find "main" in /path/to/src — 2 matches
 ```
 </details>
 
+<details>
+<summary><b>JSON output example</b></summary>
+
+```json
+{
+  "command": "symbol.find",
+  "schema_version": 2,
+  "ok": true,
+  "data": {
+    "meta": {}
+  },
+  "next": [],
+  "diagnostics": []
+}
+```
+</details>
+
+### Read examples
+
+```bash
+cargo run -- read README.md --lines 45:56         # line range
+cargo run -- read README.md --heading "## Commands" # markdown section
+```
+
+**JSON navigation** — `--key` and `--index` are JSON-only selectors:
+
+```bash
+cargo run -- read tests/fixtures/json/users.json --key users.0.accounts             # nested key
+cargo run -- read tests/fixtures/json/root-array.json --index 0:1                   # array slice
+cargo run -- read tests/fixtures/json/users.json --key users.0.accounts --index 0:1 # combined
+```
+
+JSON files always render as TOON text (compact, agent-friendly).
+
+### Error handling
+
+```bash
+cargo run -- files "*.definitely-nope" --scope src --json  # no-match → hint + next suggestion
+cargo run -- search regex "(" --scope src                  # invalid regex → error diagnostic on stderr
+```
+
+When content is minified, oversized, or parse-unreliable, `read` returns a bounded preview instead of dumping unreadable raw content. This preview fallback is skipped when you explicitly ask for raw/targeted content via `--full` or an explicit selector (`--lines`, `--heading`, `--key`, or `--index`).
+
+When structural parsing is unavailable, `symbol find` falls back to usage-only matches with snippet text, and `symbol callers` returns best-effort text fallback rows, uses `"<text-fallback>"` for `caller`, leaves `impact` empty.
+
 ### Special features
 
 - **`--parents`** — trace class/type inheritance hierarchy (shows `Parents:` and `Hierarchy:` chains)
 - **JSON navigation** — `drail read data.json --key users.0.name` for dot-path access, `--index 0:3` for array slicing
 - **Composite scanning** — `drail scan --scope src --scope tests --files "*.rs" --pattern "TODO" --read-matching` replaces chained files + search + read
-- **`.drailignore`** — scope-root ignore file for traversal filtering (explicit paths bypass it)
+- **`.drailignore`** — scope-root ignore file for traversal filtering at the active scope root. .gitignore is not read. Explicit paths bypass ignore: read still works for ignored paths, and deps accepts an ignored target path but filters traversal-derived results.
+
+```bash
+cargo run -- files "*.rs" --scope tests/fixtures/drailignore  # demonstrates .drailignore filtering
+```
 
 ## Installation
 

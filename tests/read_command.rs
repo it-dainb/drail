@@ -132,10 +132,10 @@ fn read_lines_renders_only_requested_range() {
     let text = stdout(&output);
 
     assert_success(&output);
-    assert_contains(&text, "1 │ # drail");
-    assert_contains(&text, "5 │ The product goal is simple");
+    assert_contains(&text, "1 │ <p align=\"center\">");
+    assert_contains(&text, "5 │");
     assert!(
-        !text.contains("## Command families"),
+        !text.contains("## Commands"),
         "expected later README content to be excluded, got:\n{text}"
     );
 }
@@ -186,7 +186,7 @@ fn read_heading_renders_markdown_section() {
 
 #[test]
 fn read_markdown_lines_suggests_heading_when_heading_aligned() {
-    let value = run_drail_json(["read", "README.md", "--lines", "19:22", "--json"]);
+    let value = run_drail_json(["read", "README.md", "--lines", "18:22", "--json"]);
 
     let next = value["next"].as_array().unwrap_or_else(|| {
         panic!(

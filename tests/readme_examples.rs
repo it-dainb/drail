@@ -137,7 +137,7 @@ fn readme_and_cli_contract_document_v2_output_contract() {
         assert_contains(text, "stderr");
     }
 
-    assert_contains(&readme, "cargo run -- read README.md --lines 7:17");
+    assert_contains(&readme, "cargo run -- read README.md --lines 45:56");
     assert_contains(&readme, "JSON files always render as TOON text");
     assert_contains(
         &readme,
@@ -276,20 +276,20 @@ fn quick_start_commands_from_readme_stay_valid() {
 
 #[test]
 fn read_command_examples_from_readme_stay_valid() {
-    let lines = run_drail(["read", "README.md", "--lines", "7:17"]);
+    let lines = run_drail(["read", "README.md", "--lines", "45:56"]);
     let lines_text = stdout(&lines);
     assert_success(&lines);
     assert_contains(&lines_text, "## Meta");
     assert_contains(&lines_text, "heading_aligned: true");
-    assert_contains(&lines_text, "## Why drail exists");
+    assert_contains(&lines_text, "## Quick Start");
     assert_contains(
         &lines_text,
-        "drail read \"README.md\" --heading \"## Why drail exists\"",
+        "drail read \"README.md\" --heading \"## Quick Start\"",
     );
 
-    let heading = run_drail(["read", "README.md", "--heading", "## Command families"]);
+    let heading = run_drail(["read", "README.md", "--heading", "## Commands"]);
     assert_success(&heading);
-    assert_contains(&stdout(&heading), "## Command families");
+    assert_contains(&stdout(&heading), "## Commands");
 
     let json_key = run_drail([
         "read",
