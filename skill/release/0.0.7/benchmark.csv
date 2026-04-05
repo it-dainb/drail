@@ -1,0 +1,13 @@
+prompt,category,mode,tool_calls,input_tokens,output_tokens,turns,bash,read,glob,grep,skill,drail_cmds,wall_seconds
+full_hierarchy,completeness,no-skill,2,64455,700,4,0,0,0,2,0,0,23
+save_model_deep,deep-analysis,no-skill,6,136146,2031,9,0,3,0,3,0,0,58
+three_hop_impact,multi-hop,no-skill,16,265593,2733,21,0,10,0,3,0,0,80
+trainer_comparison,comparison,no-skill,11,268246,2187,16,0,6,0,2,0,0,80
+cross_repo_pattern,cross-repo,no-skill,14,233529,2074,20,0,8,0,3,0,0,80
+dep_graph_analysis,deps-analysis,no-skill,12,304855,3160,17,1,2,5,1,0,0,94
+full_hierarchy,completeness,skill,5,209118,1158,9,2,0,0,0,1,2,47
+save_model_deep,deep-analysis,skill,10,294522,2523,14,9,0,0,0,1,10,77
+three_hop_impact,multi-hop,skill,15,336374,3636,20,12,0,0,0,1,12,103
+trainer_comparison,comparison,skill,15,438352,2940,25,11,0,0,0,1,11,106
+cross_repo_pattern,cross-repo,skill,20,439421,2949,24,16,0,0,0,1,16,106
+dep_graph_analysis,deps-analysis,skill,14,294042,3460,18,11,0,0,0,1,9,112

@@ -56,11 +56,11 @@ Default caps: `search` 10, `symbol find` 10, `symbol callers` 10, `files` 20. Wh
 |---|---|---|
 | Find class/function X | `drail symbol find X --scope <dir> --kind definition` | 1 |
 | Who calls function X? | `drail symbol callers X --scope <dir>` | 1 |
-| Trace call chain A->B->C | `drail symbol callers C --scope <dir>` (include `impact`; name the call form explicitly) | 1 |
-| Trace inheritance chain | `drail symbol find X --scope <dir> --parents` (shows full hierarchy) | 1 |
+| Trace call chain A->B->C | `drail symbol callers C --scope <dir>` (include `impact`; quote exact call expression per hop) | 1 |
+| Trace inheritance chain | `drail symbol find X --scope <dir> --parents` — **answer must start with `Hierarchy:` line verbatim** | 1 |
 | Find ALL implementations of method | `drail symbol find method_name --scope <dir>` (lists all defs) | 1 |
-| Find all subclasses of X | `drail symbol find X --scope <dir>` (report parent type, all derived types, total count, scope coverage) | 1 |
-| Compare implementations | `drail symbol find TypeA --scope <dir>` + `TypeB`; state shared base type/interface before comparing | 2-4 |
+| Find all subclasses of X | `drail symbol find X --scope <dir> --parents` — **report parent chain AND all derived types** | 1 |
+| Compare implementations | `drail symbol find TypeA --scope <dir> --parents` + `TypeB --parents` — **first line: shared ancestry** | 2-4 |
 | Search for string/decorator | `drail search text "@dec" --scope <dir>` | 1 |
 | Read a file | `drail read <path>` | 1 |
 | Navigate JSON config | `drail read config.json --key db.host` | 1 |
@@ -120,11 +120,11 @@ Place in scope root. Controls traversal filtering for `files`, `symbol`, `search
 9. **0 results after find + text = stop.** The symbol doesn't exist in scope.
 10. **Use `symbol find` for definitions with bodies** — use `search text` with `--limit` for full literal occurrence lists.
 11. **Use `symbol callers` for impact tracing** — `impact` gives hop 2. Chain another callers query for hop 3+.
-12. **Prove each hop explicitly** — name each hop, the exact call form used (e.g. `self.method()`, direct call, callback, dispatch), and the file/line. If structural callers miss it, confirm with `drail search text` + `drail read`.
-13. **Hierarchy answers must include:** (a) parent/base type and what IT inherits from (trace until no more parents), (b) all derived types, (c) total count, (d) scope covered.
-14. **Comparison answers must start with:** whether the compared types share a base type, interface, trait, or common parent — state the shared hierarchy explicitly.
-15. **When completeness is requested** — include total count and confirm scope coverage.
-16. **Cross-repo/architecture comparison** — describe concrete structural differences (e.g. registration files, dispatch mechanisms, per-variant modules) rather than abstract generalizations.
+12. **Prove each hop explicitly** — for each hop, quote the exact source expression as it appears in code (e.g. `self._method(args)`, `obj.call()`) with file/line. If structural callers miss it, confirm with `drail search text` + `drail read`.
+13. **Hierarchy answers must begin with** the `Hierarchy:` line from `drail symbol find X --parents` output verbatim, then list: (a) each ancestor and what IT inherits from (full chain), (b) all derived types, (c) total count, (d) scope covered.
+14. **Comparison answers must begin with** the shared base type/hierarchy from `--parents` on each type. First line: "Both X and Y inherit from Z" (or "X and Y share no common base"). Always include this even when the prompt doesn't ask about hierarchy.
+15. **Cross-repo/architecture answers** — include total count, scope coverage, and name specific files/patterns found (e.g. per-variant files, mapping dicts, factory classes).
+16. **Always report definition locations** — include file path and line number for every definition referenced in the answer.
 
 ---
 

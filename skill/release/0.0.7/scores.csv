@@ -1,0 +1,13 @@
+prompt,mode,score,found,total,missed
+full_hierarchy,no-skill,4.4,7,8,_BaseTrainer inherits from Trainer in base_trainer.py
+save_model_deep,no-skill,4.3,6,7,It does not mention that output_dir defaults to self.args.output_dir when None
+three_hop_impact,no-skill,4.0,4,5,Does not explicitly state that the invocation is via `self._generate_and_score_completions`
+trainer_comparison,no-skill,4.2,5,6,Does not state that both trainers are in the _BaseTrainer hierarchy
+cross_repo_pattern,no-skill,5.0,5,5,
+dep_graph_analysis,no-skill,5.0,6,6,
+full_hierarchy,skill,5.0,8,8,
+save_model_deep,skill,5.0,7,7,
+three_hop_impact,skill,5.0,5,5,
+trainer_comparison,skill,4.2,5,6,Both are in the _BaseTrainer hierarchy
+cross_repo_pattern,skill,5.0,5,5,
+dep_graph_analysis,skill,4.2,5,6,trainer.py imports from __init__.py

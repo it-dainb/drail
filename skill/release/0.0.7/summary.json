@@ -1,0 +1,30 @@
+{
+  "run": "v0.0.7",
+  "version": "0.0.7",
+  "timestamp": "2026-04-06T05:32:40+07:00",
+  "release": true,
+  "skill_scores": {
+    "full_hierarchy": 5.0,
+    "save_model_deep": 5.0,
+    "three_hop_impact": 5.0,
+    "trainer_comparison": 4.2,
+    "cross_repo_pattern": 5.0,
+    "dep_graph_analysis": 4.2
+  },
+  "noskill_scores": {
+    "full_hierarchy": 4.4,
+    "save_model_deep": 4.3,
+    "three_hop_impact": 4.0,
+    "trainer_comparison": 4.2,
+    "cross_repo_pattern": 5.0,
+    "dep_graph_analysis": 5.0
+  },
+  "skill_total": 28.4,
+  "noskill_total": 26.9,
+  "prompts": 6,
+  "skill_tokens": {"input": 3702402, "output": 16666},
+  "noskill_tokens": {"input": 2472100, "output": 12885},
+  "skill_wall_seconds": 122,
+  "noskill_wall_seconds": 104,
+  "prompt_names": ["full_hierarchy","save_model_deep","three_hop_impact","trainer_comparison","cross_repo_pattern","dep_graph_analysis"]
+}

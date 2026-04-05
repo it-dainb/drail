@@ -36,7 +36,7 @@ drail search text "target_symbol(" --scope src/   # fallback if structural calle
 drail symbol callers direct_caller --scope src/
 drail symbol callers hop2_caller --scope src/
 ```
-For each hop, state: what calls what, the **exact call form** (e.g. `self.method_name()`, direct call, callback), file location, and hop depth.
+For each hop, **quote the exact source expression** as it appears in code (e.g. `self.target_symbol(args)`, `obj.method()`) with file and line number.
 When the prompt asks how far impact goes, answer with the deepest verified hop count, not a guess.
 Always use `drail` commands for every step — never fall back to Read or Grep.
 
@@ -50,31 +50,34 @@ drail symbol find target_symbol --scope src/
 
 ## Trace type hierarchy
 ```bash
-drail symbol find TypeName --scope src/ --kind definition
-drail symbol find BaseType --scope src/ --kind definition   # if needed
+drail symbol find TypeName --scope src/ --kind definition --parents
+# Shows Parents: inline + Hierarchy: chain (e.g. TypeName -> BaseType -> GrandparentType)
 ```
 
 ## Find all derived types
 ```bash
-drail symbol find BaseType --scope src/
-# Definition shows parents; usages show derived types / implementations.
+drail symbol find BaseType --scope src/ --parents
+# Definition shows Parents: inline; usages show derived types / implementations.
+# Hierarchy: section shows the full chain.
 # If results are truncated, re-run with --limit to get full set.
 ```
 **Answer format:**
-1. State what the target type **inherits from / extends / implements** — trace the full chain (e.g. if BaseType extends GrandparentType, state both levels). Use `drail symbol find` on the parent to discover its parents.
-2. List all derived types found
-3. Give the total count
-4. State scope coverage (e.g. "covers both stable/ and experimental/")
+1. **First line**: copy the `Hierarchy:` line from drail output verbatim (e.g. `Hierarchy: ChildType -> ParentType -> GrandparentType`)
+2. State what the target type **inherits from / extends / implements** — report each ancestor and what IT inherits from (full chain)
+3. List all derived types found
+4. Give the total count
+5. State scope coverage (e.g. "covers both stable/ and experimental/")
 
 ## Compare analogous implementations
 ```bash
-drail symbol find TypeA --scope src/
-drail symbol find TypeB --scope src/
+drail symbol find TypeA --scope src/ --parents
+drail symbol find TypeB --scope src/ --parents
 drail symbol find method_name --scope src/
 ```
 **Answer format:**
-1. First line: state whether TypeA and TypeB share a common base type / interface / trait
-2. Then: key inputs/signals each uses, structural differences, and relative complexity
+1. **First line**: "Both TypeA and TypeB inherit from Z" (or "TypeA and TypeB share no common base") — always state this even if not asked
+2. Copy `Hierarchy:` lines from `--parents` output on each type
+3. Then: key inputs/signals each uses, structural differences, and relative complexity
 
 ## Dependency blast-radius check
 ```bash
@@ -100,7 +103,7 @@ drail search text "register|mapping|factory|dispatch" --scope projectA/
 drail files "*.{rs,py,ts,js,go,java,cpp}" --scope projectA/
 drail search text "register|mapping|factory|dispatch" --scope projectB/
 ```
-State each codebase's extension mechanism, where it is defined, and the architectural difference in concrete terms — name specific structural patterns (e.g. per-variant registration files, centralized mapping dicts, factory classes).
+**Always name specific files** found in each codebase. State each codebase's extension mechanism, where it is defined (file path), and list concrete per-file or per-variant patterns (e.g. `_llama.py`, `_gemma.py`, `auto/modeling_auto.py`). The architectural comparison must cite file names, not just describe patterns abstractly.
 
 ## Find files and check structure
 ```bash
