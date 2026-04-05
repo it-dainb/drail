@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -e
+
+if ! command -v cargo >/dev/null 2>&1; then
+    exit 0
+fi
+
+echo "pre-push: running cargo fmt --check..."
+cargo fmt --check
+
+echo "pre-push: running cargo test..."
+cargo test --quiet
