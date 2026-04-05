@@ -35,11 +35,7 @@ pub fn run(args: &UninstallArgs) -> Result<CommandOutput, DrailError> {
     }
 
     // Remove the binary itself if --bin is specified
-    let bin_removed = if args.bin {
-        remove_binary()?
-    } else {
-        false
-    };
+    let bin_removed = if args.bin { remove_binary()? } else { false };
 
     let note = if selection.targets.is_empty() && !bin_removed {
         selection.note.clone()

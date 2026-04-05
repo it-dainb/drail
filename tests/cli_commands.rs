@@ -106,7 +106,10 @@ fn version_prints_plain_text() {
     let output = run_drail(["--version"]);
 
     assert_success(&output);
-    assert_eq!(stdout(&output), format!("drail {}\n", env!("CARGO_PKG_VERSION")));
+    assert_eq!(
+        stdout(&output),
+        format!("drail {}\n", env!("CARGO_PKG_VERSION"))
+    );
     assert!(stderr(&output).is_empty(), "stderr:\n{}", stderr(&output));
 }
 

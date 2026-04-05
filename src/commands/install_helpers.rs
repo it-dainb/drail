@@ -7,10 +7,10 @@ use crate::cli::args::InstallSkillTarget;
 use crate::error::DrailError;
 
 pub const SKILL_MD: &str = include_str!("../../skill/SKILL.md");
-pub const COMMANDS_REFERENCE_MD: &str = include_str!("../../skill/references/commands-reference.md");
+pub const COMMANDS_REFERENCE_MD: &str =
+    include_str!("../../skill/references/commands-reference.md");
 pub const OUTPUT_CONTRACT_MD: &str = include_str!("../../skill/references/output-contract.md");
-pub const WORKFLOW_PATTERNS_MD: &str =
-    include_str!("../../skill/references/workflow-patterns.md");
+pub const WORKFLOW_PATTERNS_MD: &str = include_str!("../../skill/references/workflow-patterns.md");
 pub const AGENTS_GUIDE_MD: &str = include_str!("../../skill/AGENTS_GUIDE.md");
 
 pub const DRAIL_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -29,7 +29,7 @@ pub struct Detection {
 }
 
 impl Detection {
-    #[must_use] 
+    #[must_use]
     pub fn detected_names(&self) -> Vec<&'static str> {
         let mut names = Vec::new();
         if self.claude.is_some() {
@@ -55,7 +55,7 @@ impl Selection {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn selected_names(&self) -> Vec<&'static str> {
         self.targets.iter().map(|target| target.name).collect()
     }
@@ -68,7 +68,7 @@ pub struct InstallTarget {
     pub global_config_path: PathBuf,
 }
 
-#[must_use] 
+#[must_use]
 pub fn detect_targets() -> Detection {
     Detection {
         claude: detect_claude_path(),
@@ -98,7 +98,7 @@ pub fn config_home() -> Option<PathBuf> {
         .or_else(|| home_dir().map(|home| home.join(".config")))
 }
 
-#[must_use] 
+#[must_use]
 pub fn select_targets(target: InstallSkillTarget, detection: &Detection) -> Selection {
     match target {
         InstallSkillTarget::Claude => Selection {
@@ -123,9 +123,7 @@ pub fn select_targets(target: InstallSkillTarget, detection: &Detection) -> Sele
             }
 
             if targets.is_empty() {
-                Selection::skipped(
-                    "No Claude Code or OpenCode config directory detected.",
-                )
+                Selection::skipped("No Claude Code or OpenCode config directory detected.")
             } else {
                 Selection {
                     targets,
@@ -137,7 +135,7 @@ pub fn select_targets(target: InstallSkillTarget, detection: &Detection) -> Sele
     }
 }
 
-#[must_use] 
+#[must_use]
 pub fn claude_target() -> InstallTarget {
     let home = home_dir().unwrap_or_else(|| PathBuf::from("~"));
     let path = home.join(".claude").join("skills").join("drail");
@@ -149,7 +147,7 @@ pub fn claude_target() -> InstallTarget {
     }
 }
 
-#[must_use] 
+#[must_use]
 pub fn opencode_target() -> InstallTarget {
     let config = config_home().unwrap_or_else(|| PathBuf::from("~/.config"));
     let path = config.join("opencode").join("skills").join("drail");
@@ -170,10 +168,7 @@ pub fn prompt_for_targets(
     detection: &Detection,
     action_label: &str,
 ) -> Result<Selection, DrailError> {
-    eprintln!(
-        "drail: detected [{}]",
-        detected_label(detection)
-    );
+    eprintln!("drail: detected [{}]", detected_label(detection));
     eprintln!("drail: choose targets to {action_label}:");
 
     let options = prompt_options(detection);
@@ -232,7 +227,7 @@ fn prompt_options(detection: &Detection) -> Vec<PromptOption> {
     options
 }
 
-#[must_use] 
+#[must_use]
 pub fn detected_label(detection: &Detection) -> String {
     let names = detection.detected_names();
     if names.is_empty() {
@@ -320,7 +315,7 @@ pub fn remove_skill_files(target: &InstallTarget) -> Result<bool, DrailError> {
 
 // --- DRAIL block management ---
 
-#[must_use] 
+#[must_use]
 pub fn build_drail_block(content: &str, version: &str) -> String {
     format!(
         "{}\n{}{}{}\n\n{}\n\n{}",
@@ -334,7 +329,7 @@ pub fn build_drail_block(content: &str, version: &str) -> String {
 }
 
 /// Returns `Some((start_byte, end_byte, existing_version))` if a DRAIL block is found.
-#[must_use] 
+#[must_use]
 pub fn find_drail_block(text: &str) -> Option<(usize, usize, String)> {
     let start = text.find(DRAIL_START)?;
     let end_marker = text[start..].find(DRAIL_END)?;
@@ -446,12 +441,12 @@ pub fn remove_global_config(path: &Path) -> Result<bool, DrailError> {
 
 // --- Binary path helpers ---
 
-#[must_use] 
+#[must_use]
 pub fn current_binary_path() -> Option<PathBuf> {
     env::current_exe().ok()
 }
 
-#[must_use] 
+#[must_use]
 pub fn default_binary_path() -> PathBuf {
     home_dir()
         .unwrap_or_else(|| PathBuf::from("~"))
@@ -511,7 +506,8 @@ mod tests {
         assert!(content.contains(DRAIL_START));
         assert!(content.contains(DRAIL_END));
         assert!(content.contains(&format!(
-            "{}{}{}", DRAIL_VERSION_PREFIX, DRAIL_VERSION, DRAIL_VERSION_SUFFIX
+            "{}{}{}",
+            DRAIL_VERSION_PREFIX, DRAIL_VERSION, DRAIL_VERSION_SUFFIX
         )));
 
         fs::remove_dir_all(&dir).ok();
@@ -540,14 +536,19 @@ mod tests {
         let path = dir.join("CLAUDE.md");
 
         let old_block = build_drail_block("old content", "0.0.1");
-        fs::write(&path, format!("# My config\n\n{}\n\n# Other stuff\n", old_block)).unwrap();
+        fs::write(
+            &path,
+            format!("# My config\n\n{}\n\n# Other stuff\n", old_block),
+        )
+        .unwrap();
 
         install_global_config(&path).unwrap();
         let content = fs::read_to_string(&path).unwrap();
 
         assert!(!content.contains("0.0.1"));
         assert!(content.contains(&format!(
-            "{}{}{}", DRAIL_VERSION_PREFIX, DRAIL_VERSION, DRAIL_VERSION_SUFFIX
+            "{}{}{}",
+            DRAIL_VERSION_PREFIX, DRAIL_VERSION, DRAIL_VERSION_SUFFIX
         )));
         assert!(content.starts_with("# My config"));
         assert!(content.contains("# Other stuff"));

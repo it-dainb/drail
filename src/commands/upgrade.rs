@@ -24,10 +24,7 @@ pub fn run(args: &UpgradeArgs) -> Result<CommandOutput, DrailError> {
         }
         None => {
             // Non-interactive: upgrade detected targets
-            select_targets(
-                crate::cli::args::InstallSkillTarget::Detected,
-                &detection,
-            )
+            select_targets(crate::cli::args::InstallSkillTarget::Detected, &detection)
         }
     };
 

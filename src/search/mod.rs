@@ -191,16 +191,28 @@ pub fn search_regex(
 }
 
 /// Raw symbol search — returns structured result for programmatic inspection.
-pub fn search_symbol_raw(query: &str, scope: &Path, limit: Option<usize>) -> Result<SearchResult, DrailError> {
+pub fn search_symbol_raw(
+    query: &str,
+    scope: &Path,
+    limit: Option<usize>,
+) -> Result<SearchResult, DrailError> {
     symbol::search(query, scope, None, limit)
 }
 
 /// Raw content search — returns structured result for programmatic inspection.
-pub fn search_content_raw(query: &str, scope: &Path, limit: Option<usize>) -> Result<SearchResult, DrailError> {
+pub fn search_content_raw(
+    query: &str,
+    scope: &Path,
+    limit: Option<usize>,
+) -> Result<SearchResult, DrailError> {
     content::search(query, scope, false, None, limit)
 }
 
-pub fn search_regex_raw(pattern: &str, scope: &Path, limit: Option<usize>) -> Result<SearchResult, DrailError> {
+pub fn search_regex_raw(
+    pattern: &str,
+    scope: &Path,
+    limit: Option<usize>,
+) -> Result<SearchResult, DrailError> {
     content::search(pattern, scope, true, None, limit)
 }
 

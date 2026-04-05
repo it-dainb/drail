@@ -16,7 +16,10 @@ pub fn run() -> Result<(), DrailError> {
     let cli = match args::Cli::try_parse_from(&argv) {
         Ok(cli) => cli,
         Err(error) => {
-            if matches!(error.kind(), ErrorKind::DisplayHelp | ErrorKind::DisplayVersion) {
+            if matches!(
+                error.kind(),
+                ErrorKind::DisplayHelp | ErrorKind::DisplayVersion
+            ) {
                 print!("{error}");
                 return Ok(());
             }
@@ -48,12 +51,14 @@ pub fn run() -> Result<(), DrailError> {
 
             if cli.json {
                 let exit_code = error.exit_code();
-                let output = CommandOutput::from_error(dispatch::command_name(&cli.command), &error);
+                let output =
+                    CommandOutput::from_error(dispatch::command_name(&cli.command), &error);
                 output::write(&output, true, std::io::stdout().is_terminal());
                 Err(DrailError::AlreadyReported { exit_code })
             } else {
                 let exit_code = error.exit_code();
-                let output = CommandOutput::from_error(dispatch::command_name(&cli.command), &error);
+                let output =
+                    CommandOutput::from_error(dispatch::command_name(&cli.command), &error);
                 output::write_error(&output, false, std::io::stderr().is_terminal());
                 Err(DrailError::AlreadyReported { exit_code })
             }

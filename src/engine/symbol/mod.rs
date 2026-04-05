@@ -160,7 +160,11 @@ pub fn run(
         Vec::new()
     };
 
-    let mut command_result = SymbolFindCommandResult { data, total_found: result.total_found, diagnostics };
+    let mut command_result = SymbolFindCommandResult {
+        data,
+        total_found: result.total_found,
+        diagnostics,
+    };
 
     if let Some(budget) = budget {
         while serde_json::to_string(&command_result.data)
@@ -184,7 +188,8 @@ pub fn run_callers(
 ) -> Result<SymbolCallersCommandResult, DrailError> {
     let scope = crate::engine::resolve_scope(scope);
     let bloom = crate::index::bloom::BloomFilterCache::new();
-    let result = crate::search::callers::search_callers_structured(query, &scope, &bloom, None, limit)?;
+    let result =
+        crate::search::callers::search_callers_structured(query, &scope, &bloom, None, limit)?;
 
     let mut command_result = SymbolCallersCommandResult {
         data: SymbolCallersData {
@@ -319,11 +324,7 @@ fn is_callable_definition(snippet: &str) -> bool {
 /// Resolve the full parent class hierarchy by iteratively looking up parents.
 /// Returns a chain like `["_BaseTrainer", "Trainer", "object"]`.
 /// Stops when no more parents are found or a cycle is detected. Max depth: 10.
-fn resolve_hierarchy(
-    query: &str,
-    scope: &Path,
-    matches: &[SymbolMatch],
-) -> Vec<String> {
+fn resolve_hierarchy(query: &str, scope: &Path, matches: &[SymbolMatch]) -> Vec<String> {
     let mut chain = vec![query.to_string()];
 
     // Collect initial parents from the definition matches

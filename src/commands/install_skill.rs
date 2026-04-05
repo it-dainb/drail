@@ -41,9 +41,7 @@ pub fn run(args: &InstallSkillArgs) -> Result<CommandOutput, DrailError> {
     } else {
         format!(
             "Installed skill for {}.",
-            selection
-                .selected_names()
-                .join(" and ")
+            selection.selected_names().join(" and ")
         )
     };
 
@@ -65,10 +63,7 @@ pub fn run(args: &InstallSkillArgs) -> Result<CommandOutput, DrailError> {
 
 fn render_text(detection: &Detection, selection: &Selection, note: &str) -> String {
     use std::fmt::Write as _;
-    let mut text = format!(
-        "Detected tooling: {}\n{note}",
-        detected_label(detection),
-    );
+    let mut text = format!("Detected tooling: {}\n{note}", detected_label(detection),);
 
     if selection.targets.is_empty() {
         return text;
