@@ -6,8 +6,7 @@ const https = require("https");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
-const zlib = require("zlib");
+const { execFileSync, spawn } = require("child_process");
 
 const PLATFORM_MAP = {
   "linux-x64": "x86_64-unknown-linux-musl",
@@ -33,8 +32,10 @@ const url = `https://github.com/it-dainb/drail/releases/download/v${version}/dra
 const binDir = path.join(__dirname, "bin");
 const binPath = path.join(binDir, binName);
 
-// Skip if binary already exists (e.g. re-install)
 if (fs.existsSync(binPath)) {
+  verifyBinary();
+  maybeInstallSkill();
+  console.log("drail: installed successfully");
   process.exit(0);
 }
 
@@ -42,14 +43,14 @@ fs.mkdirSync(binDir, { recursive: true });
 
 console.log(`drail: downloading ${target} binary...`);
 
-function follow(url, callback) {
-  const mod = url.startsWith("https") ? https : http;
-  mod.get(url, { headers: { "User-Agent": "drail-npm" } }, (res) => {
+function follow(nextUrl, callback) {
+  const mod = nextUrl.startsWith("https") ? https : http;
+  mod.get(nextUrl, { headers: { "User-Agent": "drail-npm" } }, (res) => {
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       follow(res.headers.location, callback);
     } else if (res.statusCode !== 200) {
       console.error(`drail: download failed (HTTP ${res.statusCode})`);
-      console.error(`URL: ${url}`);
+      console.error(`URL: ${nextUrl}`);
       console.error("Install manually: cargo install drail");
       process.exit(1);
     } else {
@@ -62,25 +63,66 @@ function follow(url, callback) {
   });
 }
 
+function finishInstall() {
+  verifyBinary();
+  maybeInstallSkill();
+  console.log("drail: installed successfully");
+}
+
+function verifyBinary() {
+  try {
+    const versionText = execFileSync(binPath, ["--version"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+    console.log(`drail: verified CLI (${versionText})`);
+  } catch (err) {
+    console.error("drail: installed binary failed verification");
+    console.error(err.stderr ? String(err.stderr) : err.message);
+    process.exit(1);
+  }
+}
+
+function maybeInstallSkill() {
+  if (!isGlobalInstall()) {
+    console.log("drail: skipping skill install for non-global npm install");
+    return;
+  }
+
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    console.log("drail: skipping skill prompt in non-interactive install");
+    return;
+  }
+
+  try {
+    execFileSync(binPath, ["install-skill"], { stdio: "inherit" });
+  } catch (err) {
+    process.exit(err.status ?? 1);
+  }
+}
+
+function isGlobalInstall() {
+  return process.env.npm_config_global === "true" || process.env.npm_config_location === "global";
+}
+
 follow(url, (res) => {
   if (isWindows) {
-    // For Windows, save zip and extract with tar (available on modern Windows)
     const tmpZip = path.join(binDir, "drail.zip");
     const out = fs.createWriteStream(tmpZip);
     res.pipe(out);
     out.on("finish", () => {
       out.close();
       try {
-        execSync(`tar -xf "${tmpZip}" -C "${binDir}"`, { stdio: "ignore" });
+        execFileSync("tar", ["-xf", tmpZip, "-C", binDir], { stdio: "ignore" });
         fs.unlinkSync(tmpZip);
+        finishInstall();
       } catch {
         console.error("drail: failed to extract. Install manually: cargo install drail");
         process.exit(1);
       }
     });
   } else {
-    // Unix: pipe through gunzip and tar
-    const tar = require("child_process").spawn("tar", ["xz", "-C", binDir], {
+    const tar = spawn("tar", ["xz", "-C", binDir], {
       stdio: ["pipe", "inherit", "inherit"],
     });
     res.pipe(tar.stdin);
@@ -90,7 +132,7 @@ follow(url, (res) => {
         process.exit(1);
       }
       fs.chmodSync(binPath, 0o755);
-      console.log("drail: installed successfully");
+      finishInstall();
     });
   }
 });

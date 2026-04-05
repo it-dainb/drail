@@ -176,7 +176,10 @@ fn rerunning_replaces_existing_target_idempotently() {
         &home,
         "/usr/bin",
         false,
-        &[("DRAIL_INSTALL_SOURCE", source_one_value.as_str())],
+        &[
+            ("DRAIL_INSTALL_SOURCE", source_one_value.as_str()),
+            ("DRAIL_INSTALL_SKIP_VERIFY", "1"),
+        ],
     );
     assert_success(&first);
     assert_eq!(
@@ -189,7 +192,10 @@ fn rerunning_replaces_existing_target_idempotently() {
         &home,
         "/usr/bin",
         false,
-        &[("DRAIL_INSTALL_SOURCE", source_two_value.as_str())],
+        &[
+            ("DRAIL_INSTALL_SOURCE", source_two_value.as_str()),
+            ("DRAIL_INSTALL_SKIP_VERIFY", "1"),
+        ],
     );
     assert_success(&second);
     assert_eq!(

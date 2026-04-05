@@ -27,6 +27,7 @@ pub enum Command {
     Deps(DepsArgs),
     Map(MapArgs),
     Scan(ScanArgs),
+    InstallSkill(InstallSkillArgs),
 }
 
 #[derive(Debug, Args)]
@@ -176,4 +177,20 @@ pub struct ScanArgs {
 
     #[arg(long)]
     pub budget: Option<u64>,
+}
+
+#[derive(Debug, Args)]
+pub struct InstallSkillArgs {
+    #[arg(long, value_enum)]
+    pub target: Option<InstallSkillTarget>,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+#[value(rename_all = "snake_case")]
+pub enum InstallSkillTarget {
+    Claude,
+    Opencode,
+    Both,
+    Detected,
+    Skip,
 }

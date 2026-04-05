@@ -22,7 +22,6 @@
     "url": "git+https://github.com/it-dainb/drail.git"
   },
   "keywords": [
-    "mcp",
     "code-search",
     "tree-sitter",
     "developer-tools",

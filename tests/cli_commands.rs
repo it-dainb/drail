@@ -81,7 +81,7 @@ fn symbol_find_is_a_valid_command() {
 }
 
 #[test]
-fn help_lists_only_current_command_families() {
+fn help_lists_current_command_families() {
     let output = run_drail(["--help"]);
     let text = combined_output(&output);
 
@@ -94,10 +94,20 @@ fn help_lists_only_current_command_families() {
     assert_contains(&text, "deps");
     assert_contains(&text, "map");
     assert_contains(&text, "scan");
+    assert_contains(&text, "install-skill");
     assert!(
-        !text.contains("install") && !text.contains("mcp"),
+        !text.contains("mcp"),
         "expected help text to stay CLI-only, got:\n{text}"
     );
+}
+
+#[test]
+fn version_prints_plain_text() {
+    let output = run_drail(["--version"]);
+
+    assert_success(&output);
+    assert_eq!(stdout(&output), format!("drail {}\n", env!("CARGO_PKG_VERSION")));
+    assert!(stderr(&output).is_empty(), "stderr:\n{}", stderr(&output));
 }
 
 #[test]
