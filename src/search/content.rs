@@ -21,6 +21,7 @@ pub fn search(
     scope: &Path,
     is_regex: bool,
     context: Option<&Path>,
+    limit: Option<usize>,
 ) -> Result<SearchResult, DrailError> {
     let matcher = if is_regex {
         RegexMatcher::new(pattern)
@@ -31,6 +32,9 @@ pub fn search(
         query: pattern.to_string(),
         reason: e.to_string(),
     })?;
+
+    let max_matches = limit.unwrap_or(MAX_MATCHES);
+    let early_quit = max_matches * 3;
 
     let matches: Mutex<Vec<Match>> = Mutex::new(Vec::new());
     // Relaxed is correct: walker.run() joins all threads before we read the final value.
@@ -45,7 +49,7 @@ pub fn search(
         let total_found = &total_found;
 
         Box::new(move |entry| {
-            if total_found.load(Ordering::Relaxed) >= EARLY_QUIT_THRESHOLD {
+            if total_found.load(Ordering::Relaxed) >= early_quit {
                 return ignore::WalkState::Quit;
             }
 
@@ -87,6 +91,7 @@ pub fn search(
                         def_name: None,
                         def_weight: 0,
                         impl_target: None,
+                        parents: Vec::new(),
                     });
                     Ok(true)
                 }),
@@ -100,7 +105,7 @@ pub fn search(
                 all.extend(file_matches);
             }
 
-            if total_found.load(Ordering::Relaxed) >= EARLY_QUIT_THRESHOLD {
+            if total_found.load(Ordering::Relaxed) >= early_quit {
                 ignore::WalkState::Quit
             } else {
                 ignore::WalkState::Continue
@@ -114,7 +119,7 @@ pub fn search(
         .unwrap_or_else(std::sync::PoisonError::into_inner);
 
     rank::sort(&mut all_matches, pattern, scope, context);
-    all_matches.truncate(MAX_MATCHES);
+    all_matches.truncate(max_matches);
 
     Ok(SearchResult {
         query: pattern.to_string(),

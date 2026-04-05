@@ -26,6 +26,8 @@ pub struct SymbolMatch {
     pub range: SymbolRange,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub snippet: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub parents: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -35,11 +37,14 @@ pub struct SymbolFindData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<SymbolMatchKind>,
     pub matches: Vec<SymbolMatch>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub hierarchy: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct SymbolFindCommandResult {
     pub data: SymbolFindData,
+    pub total_found: usize,
     pub diagnostics: Vec<Diagnostic>,
 }
 
@@ -78,10 +83,12 @@ pub fn run(
     query: &str,
     scope: &Path,
     kind: Option<SymbolFindKind>,
+    limit: Option<usize>,
+    parents: bool,
     budget: Option<u64>,
 ) -> Result<SymbolFindCommandResult, DrailError> {
     let scope = crate::engine::resolve_scope(scope);
-    let result = crate::search::search_symbol_raw(query, &scope)?;
+    let result = crate::search::search_symbol_raw(query, &scope, limit)?;
 
     let kind_filter = kind.map(SymbolMatchKind::from);
     let matches = result
@@ -115,14 +122,22 @@ pub fn run(
                 },
             },
             snippet: Some(candidate.text),
+            parents: candidate.parents,
         })
         .collect::<Vec<_>>();
+
+    let hierarchy = if parents {
+        resolve_hierarchy(query, &scope, &matches)
+    } else {
+        Vec::new()
+    };
 
     let data = SymbolFindData {
         query: query.to_string(),
         scope: scope.display().to_string(),
         kind: kind_filter,
         matches,
+        hierarchy,
     };
 
     let diagnostics = if data.matches.is_empty() {
@@ -145,7 +160,7 @@ pub fn run(
         Vec::new()
     };
 
-    let mut command_result = SymbolFindCommandResult { data, diagnostics };
+    let mut command_result = SymbolFindCommandResult { data, total_found: result.total_found, diagnostics };
 
     if let Some(budget) = budget {
         while serde_json::to_string(&command_result.data)
@@ -164,11 +179,12 @@ pub fn run(
 pub fn run_callers(
     query: &str,
     scope: &Path,
+    limit: Option<usize>,
     budget: Option<u64>,
 ) -> Result<SymbolCallersCommandResult, DrailError> {
     let scope = crate::engine::resolve_scope(scope);
     let bloom = crate::index::bloom::BloomFilterCache::new();
-    let result = crate::search::callers::search_callers_structured(query, &scope, &bloom, None)?;
+    let result = crate::search::callers::search_callers_structured(query, &scope, &bloom, None, limit)?;
 
     let mut command_result = SymbolCallersCommandResult {
         data: SymbolCallersData {
@@ -254,7 +270,7 @@ fn callers_diagnostics(
         }]);
     }
 
-    let symbol_result = crate::search::search_symbol_raw(query, scope)?;
+    let symbol_result = crate::search::search_symbol_raw(query, scope, None)?;
     let definition_snippets = symbol_result
         .matches
         .iter()
@@ -298,6 +314,60 @@ fn is_callable_definition(snippet: &str) -> bool {
         || snippet.starts_with("pub async fn ")
         || snippet.starts_with("function ")
         || snippet.starts_with("def ")
+}
+
+/// Resolve the full parent class hierarchy by iteratively looking up parents.
+/// Returns a chain like `["_BaseTrainer", "Trainer", "object"]`.
+/// Stops when no more parents are found or a cycle is detected. Max depth: 10.
+fn resolve_hierarchy(
+    query: &str,
+    scope: &Path,
+    matches: &[SymbolMatch],
+) -> Vec<String> {
+    let mut chain = vec![query.to_string()];
+
+    // Collect initial parents from the definition matches
+    let mut frontier: Vec<String> = matches
+        .iter()
+        .filter(|m| m.kind == SymbolMatchKind::Definition)
+        .flat_map(|m| m.parents.clone())
+        .collect();
+
+    frontier.dedup();
+
+    let mut seen: std::collections::HashSet<String> = chain.iter().cloned().collect();
+
+    for _ in 0..10 {
+        if frontier.is_empty() {
+            break;
+        }
+
+        let mut next_frontier = Vec::new();
+        for parent in &frontier {
+            if seen.contains(parent) {
+                continue;
+            }
+            seen.insert(parent.clone());
+            chain.push(parent.clone());
+
+            // Look up this parent's own parents
+            if let Ok(parent_result) = crate::search::search_symbol_raw(parent, scope, Some(5)) {
+                for m in &parent_result.matches {
+                    if m.is_definition {
+                        for grandparent in &m.parents {
+                            if !seen.contains(grandparent) {
+                                next_frontier.push(grandparent.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        frontier = next_frontier;
+    }
+
+    chain
 }
 
 impl From<SymbolFindKind> for SymbolMatchKind {

@@ -165,7 +165,7 @@ pub fn search_symbol(
     scope: &Path,
     cache: &OutlineCache,
 ) -> Result<String, DrailError> {
-    let result = symbol::search(query, scope, None)?;
+    let result = symbol::search(query, scope, None, None)?;
     let bloom = crate::index::bloom::BloomFilterCache::new();
     format_search_result(&result, cache, &bloom, 0)
 }
@@ -175,7 +175,7 @@ pub fn search_content(
     scope: &Path,
     cache: &OutlineCache,
 ) -> Result<String, DrailError> {
-    let result = content::search(query, scope, false, None)?;
+    let result = content::search(query, scope, false, None, None)?;
     let bloom = crate::index::bloom::BloomFilterCache::new();
     format_search_result(&result, cache, &bloom, 0)
 }
@@ -185,23 +185,23 @@ pub fn search_regex(
     scope: &Path,
     cache: &OutlineCache,
 ) -> Result<String, DrailError> {
-    let result = content::search(pattern, scope, true, None)?;
+    let result = content::search(pattern, scope, true, None, None)?;
     let bloom = crate::index::bloom::BloomFilterCache::new();
     format_search_result(&result, cache, &bloom, 0)
 }
 
 /// Raw symbol search — returns structured result for programmatic inspection.
-pub fn search_symbol_raw(query: &str, scope: &Path) -> Result<SearchResult, DrailError> {
-    symbol::search(query, scope, None)
+pub fn search_symbol_raw(query: &str, scope: &Path, limit: Option<usize>) -> Result<SearchResult, DrailError> {
+    symbol::search(query, scope, None, limit)
 }
 
 /// Raw content search — returns structured result for programmatic inspection.
-pub fn search_content_raw(query: &str, scope: &Path) -> Result<SearchResult, DrailError> {
-    content::search(query, scope, false, None)
+pub fn search_content_raw(query: &str, scope: &Path, limit: Option<usize>) -> Result<SearchResult, DrailError> {
+    content::search(query, scope, false, None, limit)
 }
 
-pub fn search_regex_raw(pattern: &str, scope: &Path) -> Result<SearchResult, DrailError> {
-    content::search(pattern, scope, true, None)
+pub fn search_regex_raw(pattern: &str, scope: &Path, limit: Option<usize>) -> Result<SearchResult, DrailError> {
+    content::search(pattern, scope, true, None, limit)
 }
 
 pub fn search_glob(
@@ -209,7 +209,7 @@ pub fn search_glob(
     scope: &Path,
     _cache: &OutlineCache,
 ) -> Result<String, DrailError> {
-    let result = glob::search(pattern, scope)?;
+    let result = glob::search(pattern, scope, None)?;
     format_glob_result(&result, scope)
 }
 

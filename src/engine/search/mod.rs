@@ -30,35 +30,39 @@ pub struct SearchData {
 #[derive(Debug, Clone)]
 pub struct SearchCommandResult {
     pub data: SearchData,
+    pub total_found: usize,
     pub diagnostics: Vec<Diagnostic>,
 }
 
 pub fn run_text(
     query: &str,
     scope: &Path,
+    limit: Option<usize>,
     budget: Option<u64>,
 ) -> Result<SearchCommandResult, DrailError> {
-    run(query, scope, SearchMode::Text, budget)
+    run(query, scope, SearchMode::Text, limit, budget)
 }
 
 pub fn run_regex(
     pattern: &str,
     scope: &Path,
+    limit: Option<usize>,
     budget: Option<u64>,
 ) -> Result<SearchCommandResult, DrailError> {
-    run(pattern, scope, SearchMode::Regex, budget)
+    run(pattern, scope, SearchMode::Regex, limit, budget)
 }
 
 fn run(
     query: &str,
     scope: &Path,
     mode: SearchMode,
+    limit: Option<usize>,
     budget: Option<u64>,
 ) -> Result<SearchCommandResult, DrailError> {
     let scope = crate::engine::resolve_scope(scope);
     let result = match mode {
-        SearchMode::Text => crate::search::search_content_raw(query, &scope)?,
-        SearchMode::Regex => crate::search::search_regex_raw(query, &scope)?,
+        SearchMode::Text => crate::search::search_content_raw(query, &scope, limit)?,
+        SearchMode::Regex => crate::search::search_regex_raw(query, &scope, limit)?,
     };
 
     let mut command_result = SearchCommandResult {
@@ -81,6 +85,7 @@ fn run(
                 })
                 .collect(),
         },
+        total_found: result.total_found,
         diagnostics: diagnostics(query, &scope, mode, result.total_found),
     };
 

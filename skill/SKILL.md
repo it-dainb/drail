@@ -8,7 +8,7 @@ user_invocable: true
 
 drail gives AI agents explicit subcommands for code navigation: reading, symbol lookup, text search, caller tracing, file listing, dependency inspection, codebase mapping, and composite scanning.
 
-> **Use drail, not Read/Grep/Glob/grep/find/cat.** drail is AST-aware and returns function bodies inline — one call replaces 3-6 Read/Grep cycles.
+> **ALWAYS use drail for source code.** Do not fall back to Read, Grep, Glob, grep, find, or cat for any source-code task. drail is AST-aware and returns function bodies inline — one call replaces 3-6 Read/Grep cycles. Only use non-drail tools for binary/image/PDF files or when drail is genuinely unavailable.
 >
 > | You want to... | drail command | NOT these |
 > |---|---|---|
@@ -25,7 +25,7 @@ drail gives AI agents explicit subcommands for code navigation: reading, symbol 
 > | Codebase structure | `drail map --scope <dir>` | ls, Glob tool |
 > | Composite scan | `drail scan --scope <dir> --pattern "X"` | Multiple tools |
 >
-> **Exceptions:** binary/image/PDF files, or when drail is unavailable.
+> **Exceptions:** binary/image/PDF files only. If drail is installed, there is no reason to use Read/Grep/Glob for source code.
 
 ---
 
@@ -34,16 +34,19 @@ drail gives AI agents explicit subcommands for code navigation: reading, symbol 
 | Command | Flags | Returns |
 |---|---|---|
 | `drail read <path>` | `--lines S:E` `--heading "H"` `--key P` `--index S:E` `--full` `--budget N` | File content/outline |
-| `drail symbol find <q>` | `--scope D` `--kind definition\|usage` `--budget N` | Definitions + usages with body |
-| `drail symbol callers <q>` | `--scope D` `--budget N` | Call sites + 2nd-hop impact |
-| `drail search text <q>` | `--scope D` `--budget N` | Literal matches |
-| `drail search regex <p>` | `--scope D` `--budget N` | Regex matches |
-| `drail files <glob>` | `--scope D` `--budget N` | File list (max 20) |
+| `drail symbol find <q>` | `--scope D` `--kind definition\|usage` `--limit N` `--parents` `--budget N` | Definitions + usages with body |
+| `drail symbol callers <q>` | `--scope D` `--limit N` `--budget N` | Call sites + 2nd-hop impact |
+| `drail search text <q>` | `--scope D` `--limit N` `--budget N` | Literal matches |
+| `drail search regex <p>` | `--scope D` `--limit N` `--budget N` | Regex matches |
+| `drail files <glob>` | `--scope D` `--limit N` `--budget N` | File list |
 | `drail deps <path>` | `--scope D` `--budget N` | local imports, external imports, reverse dependents |
 | `drail map` | `--scope D` `--depth N` `--budget N` | Symbol tree (default depth 3) |
 | `drail scan` | `--scope D` (repeatable) `--files G` (repeatable) `--pattern P` (repeatable) `--read-matching` `--budget N` | Files + matches + outlines |
 
 All commands accept `--json` for machine-readable JSON envelope (schema v2).
+
+### Result limits (`--limit`)
+Default caps: `search` 10, `symbol find` 10, `symbol callers` 10, `files` 20. When truncated, `## Next` shows how many were hidden and the exact `--limit N` command. **Always follow truncation guidance** when completeness matters.
 
 ---
 
@@ -53,11 +56,11 @@ All commands accept `--json` for machine-readable JSON envelope (schema v2).
 |---|---|---|
 | Find class/function X | `drail symbol find X --scope <dir> --kind definition` | 1 |
 | Who calls function X? | `drail symbol callers X --scope <dir>` | 1 |
-| Trace call chain A->B->C | `drail symbol callers C --scope <dir>` (include `impact`; state `self.method()` calls explicitly) | 1 |
-| Trace inheritance chain | `drail symbol find X --scope <dir>` -> read base class | 1-2 |
+| Trace call chain A->B->C | `drail symbol callers C --scope <dir>` (include `impact`; name the call form explicitly) | 1 |
+| Trace inheritance chain | `drail symbol find X --scope <dir> --parents` (shows full hierarchy) | 1 |
 | Find ALL implementations of method | `drail symbol find method_name --scope <dir>` (lists all defs) | 1 |
-| Find all subclasses of X | `drail symbol find X --scope <dir>` (report parent, subclasses, total count, stable/experimental coverage) | 1 |
-| Compare class methods | `drail symbol find ClassA --scope <dir>` + `ClassB`; state shared base class before comparing | 2-4 |
+| Find all subclasses of X | `drail symbol find X --scope <dir>` (report parent type, all derived types, total count, scope coverage) | 1 |
+| Compare implementations | `drail symbol find TypeA --scope <dir>` + `TypeB`; state shared base type/interface before comparing | 2-4 |
 | Search for string/decorator | `drail search text "@dec" --scope <dir>` | 1 |
 | Read a file | `drail read <path>` | 1 |
 | Navigate JSON config | `drail read config.json --key db.host` | 1 |
@@ -81,7 +84,6 @@ Every command returns 4 sections:
 **Body shown = don't re-read.** When `symbol find` returns a definition, the full body is already inline.
 
 ---
-
 ## Key capabilities
 
 ### JSON navigation (`read`)
@@ -105,25 +107,24 @@ Cap response size in bytes. Trims least-important data first (summaries > matche
 
 ### `.drailignore`
 Place in scope root. Controls traversal filtering for `files`, `symbol`, `search`, `deps`, `map`, `scan`. Only the scope-root file is read (no nesting/merging). Explicit `read`/`deps` target paths bypass ignore.
-
----
-
 ## Efficiency rules
 
-1. **1-2 commands per task.** Don't chain what one command covers.
-2. **Body shown = done.** Don't re-read files when evidence already has the content.
-3. **Use `## Next` suggestions** — don't invent recovery. Run the suggested command.
-4. **Broad `--scope`** — search everything in one pass.
-5. **Use `scan` for composite needs** — files + search + outlines in one call.
-6. **Use `--budget`** to control large outputs rather than multiple narrow queries.
-7. **0 results after find + text = stop.** The symbol doesn't exist in scope.
-8. **`symbol find` for ALL implementations** — `search text` caps at 10 results. Use `symbol find` to get all definitions. For subclasses, `symbol find BaseClass` shows usages which include all subclass definitions.
-9. **`symbol callers` gives 2-hop impact** — the `impact` section shows who calls the callers (2nd hop). Use this for call-chain tracing instead of manually tracing each hop.
-10. **Read call chains carefully** — wrapper functions (e.g., `find_executable_batch_size(self.method, ...)`) are indirect calls. Trace every function call in method bodies.
-11. **Report both directions for class hierarchy** — when describing a class, state what it **inherits from** (parents) AND what **inherits from it** (subclasses).
-12. **Multi-hop tracing: chain 3+ hops** — for deep impact analysis, chain `symbol callers` or `search text "self.method("` at each hop. Explicitly state the call mechanism (e.g., "via self.method_name()") at each step.
-13. **When prompt says ALL/list complete list** — include total count and confirm stable/experimental coverage.
-14. **For class comparisons** — explicitly state each class's shared base class before comparing methods.
+1. **drail is mandatory for source code.** Never use Read, Grep, Glob, grep, find, or cat for source-code tasks. Use `drail read`, `drail symbol find`, `drail search text`, `drail files`, etc.
+2. **1-2 drail commands per task.** Don't chain what one command covers.
+3. **Body shown = done.** Don't re-read files when evidence already has the content.
+4. **Use `## Next` suggestions** — don't invent recovery. Run the suggested command. When Next says results were truncated, re-run with `--limit` to get the full set.
+5. **Broad `--scope`** — search everything in one pass.
+6. **Use `scan` for composite needs** — files + search + outlines in one call.
+7. **Use `--budget`** to control large outputs rather than multiple narrow queries.
+8. **Use `--limit`** when completeness matters — override default caps to get all matches.
+9. **0 results after find + text = stop.** The symbol doesn't exist in scope.
+10. **Use `symbol find` for definitions with bodies** — use `search text` with `--limit` for full literal occurrence lists.
+11. **Use `symbol callers` for impact tracing** — `impact` gives hop 2. Chain another callers query for hop 3+.
+12. **Prove each hop explicitly** — name each hop, the exact call form used (e.g. `self.method()`, direct call, callback, dispatch), and the file/line. If structural callers miss it, confirm with `drail search text` + `drail read`.
+13. **Hierarchy answers must include:** (a) parent/base type and what IT inherits from (trace until no more parents), (b) all derived types, (c) total count, (d) scope covered.
+14. **Comparison answers must start with:** whether the compared types share a base type, interface, trait, or common parent — state the shared hierarchy explicitly.
+15. **When completeness is requested** — include total count and confirm scope coverage.
+16. **Cross-repo/architecture comparison** — describe concrete structural differences (e.g. registration files, dispatch mechanisms, per-variant modules) rather than abstract generalizations.
 
 ---
 

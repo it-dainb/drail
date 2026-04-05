@@ -7,9 +7,19 @@ use crate::output::{json, text};
 use serde_json::{json, Map, Value};
 
 pub fn run(args: &FilesArgs) -> Result<CommandOutput, DrailError> {
-    let result = files::run(&args.pattern, &args.scope, args.budget)?;
-    let next = next_for_files(&result);
-    let diagnostics = diagnostics_without_suggestions(&result.diagnostics);
+    let result = files::run(&args.pattern, &args.scope, args.limit, args.budget)?;
+    let mut next = next_for_files(&result);
+    if let Some(hint) = crate::output::truncation_hint(
+        result.data.files.len(),
+        result.total_found,
+        "files",
+        "drail files",
+        &result.data.pattern,
+        &result.data.scope,
+    ) {
+        next.push(hint);
+    }
+    let diagnostics = crate::output::diagnostics_without_suggestions(&result.diagnostics);
     let mut output = CommandOutput::with_parts(
         "files",
         text::files::render(&result),
@@ -21,19 +31,6 @@ pub fn run(args: &FilesArgs) -> Result<CommandOutput, DrailError> {
     output.next = next;
 
     Ok(output)
-}
-
-fn diagnostics_without_suggestions(
-    diagnostics: &[crate::output::json::envelope::Diagnostic],
-) -> Vec<crate::output::json::envelope::Diagnostic> {
-    diagnostics
-        .iter()
-        .cloned()
-        .map(|mut diagnostic| {
-            diagnostic.suggestion = None;
-            diagnostic
-        })
-        .collect()
 }
 
 fn next_for_files(result: &files::FilesCommandResult) -> Vec<NextItem> {

@@ -21,21 +21,20 @@ pub fn run() -> Result<(), DrailError> {
                 return Ok(());
             }
 
-            let error = DrailError::Clap {
-                message: error.to_string().replace("Usage:", "USAGE:"),
-                exit_code: error.exit_code(),
-            };
-            let output = CommandOutput::from_error("cli", &error);
+            let exit_code = error.exit_code();
 
             if json_requested {
+                let error = DrailError::Clap {
+                    message: error.to_string().replace("Usage:", "USAGE:"),
+                    exit_code,
+                };
+                let output = CommandOutput::from_error("cli", &error);
                 output::write(&output, true, std::io::stdout().is_terminal());
             } else {
-                output::write_error(&output, false, std::io::stderr().is_terminal());
+                eprint!("{error}");
             }
 
-            return Err(DrailError::AlreadyReported {
-                exit_code: error.exit_code(),
-            });
+            return Err(DrailError::AlreadyReported { exit_code });
         }
     };
 

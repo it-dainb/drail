@@ -128,6 +128,95 @@ pub(crate) fn extract_implemented_interfaces(
     interfaces
 }
 
+/// Extract parent class names from a class definition node.
+///
+/// Supports Python (`superclasses`), TS/JS (`class_heritage` → `extends_clause`),
+/// Java (`superclass`), C++ (`base_class_clause`), and C# (`base_list`).
+pub(crate) fn extract_superclasses(node: tree_sitter::Node, lines: &[&str]) -> Vec<String> {
+    let mut parents = Vec::new();
+
+    // Python: class X(Y, Z):
+    // AST: class_definition → superclasses: argument_list → identifier children
+    if let Some(superclasses) = node.child_by_field_name("superclasses") {
+        let mut cursor = superclasses.walk();
+        for child in superclasses.children(&mut cursor) {
+            if child.kind().contains("identifier") {
+                let text = node_text_simple(child, lines);
+                if !text.is_empty() {
+                    parents.push(text);
+                }
+            }
+        }
+        return parents;
+    }
+
+    // Java: class X extends Y
+    // AST: class_declaration → superclass: superclass → type_identifier
+    if let Some(superclass) = node.child_by_field_name("superclass") {
+        let mut cursor = superclass.walk();
+        for child in superclass.children(&mut cursor) {
+            if child.kind().contains("identifier") {
+                let text = node_text_simple(child, lines);
+                if !text.is_empty() {
+                    parents.push(text);
+                }
+            }
+        }
+    }
+
+    // Walk children for TS/JS class_heritage, C++ base_class_clause, C# base_list
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        match child.kind() {
+            // TS/JS: class_heritage → extends_clause → value: identifier
+            "class_heritage" => {
+                let mut inner = child.walk();
+                for heritage_child in child.children(&mut inner) {
+                    if heritage_child.kind() == "extends_clause" {
+                        if let Some(value) = heritage_child.child_by_field_name("value") {
+                            let text = node_text_simple(value, lines);
+                            if !text.is_empty() {
+                                parents.push(text);
+                            }
+                        }
+                    }
+                }
+            }
+            // C++: base_class_clause → type_identifier (skip access_specifier)
+            "base_class_clause" => {
+                let mut inner = child.walk();
+                for base_child in child.children(&mut inner) {
+                    if base_child.kind().contains("identifier")
+                        && base_child.kind() != "access_specifier"
+                    {
+                        let text = node_text_simple(base_child, lines);
+                        if !text.is_empty() {
+                            parents.push(text);
+                        }
+                    }
+                }
+            }
+            // C#: base_list → identifier or generic_name children
+            "base_list" => {
+                let mut inner = child.walk();
+                for base_child in child.children(&mut inner) {
+                    if base_child.kind().contains("identifier")
+                        || base_child.kind() == "generic_name"
+                    {
+                        let text = node_text_simple(base_child, lines);
+                        if !text.is_empty() {
+                            parents.push(text);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    parents
+}
+
 /// Semantic weight for definition kinds. Primary declarations rank highest.
 pub(crate) fn definition_weight(kind: &str) -> u16 {
     match kind {
@@ -153,5 +242,100 @@ pub(crate) fn definition_weight(kind: &str) -> u16 {
         "lexical_declaration" | "variable_declaration" => 40,
         "export_statement" => 30,
         _ => 50,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse_and_root(code: &str, lang: tree_sitter::Language) -> (tree_sitter::Tree, Vec<String>) {
+        let mut parser = tree_sitter::Parser::new();
+        parser.set_language(&lang).unwrap();
+        let tree = parser.parse(code, None).unwrap();
+        let lines: Vec<String> = code.lines().map(|s| s.to_string()).collect();
+        (tree, lines)
+    }
+
+    fn find_class_node(node: tree_sitter::Node) -> Option<tree_sitter::Node> {
+        if node.kind() == "class_definition"
+            || node.kind() == "class_declaration"
+            || node.kind() == "class_specifier"
+        {
+            return Some(node);
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if let Some(found) = find_class_node(child) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn python_single_parent() {
+        let code = "class _BaseTrainer(Trainer):\n    pass\n";
+        let lang = tree_sitter_python::LANGUAGE;
+        let (tree, lines) = parse_and_root(code, lang.into());
+        let lines_ref: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
+        let class_node = find_class_node(tree.root_node()).unwrap();
+        let parents = extract_superclasses(class_node, &lines_ref);
+        assert_eq!(parents, vec!["Trainer"]);
+    }
+
+    #[test]
+    fn python_multiple_parents() {
+        let code = "class DPOTrainer(_BaseTrainer, ABC):\n    pass\n";
+        let lang = tree_sitter_python::LANGUAGE;
+        let (tree, lines) = parse_and_root(code, lang.into());
+        let lines_ref: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
+        let class_node = find_class_node(tree.root_node()).unwrap();
+        let parents = extract_superclasses(class_node, &lines_ref);
+        assert_eq!(parents, vec!["_BaseTrainer", "ABC"]);
+    }
+
+    #[test]
+    fn python_no_parents() {
+        let code = "class Animal:\n    pass\n";
+        let lang = tree_sitter_python::LANGUAGE;
+        let (tree, lines) = parse_and_root(code, lang.into());
+        let lines_ref: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
+        let class_node = find_class_node(tree.root_node()).unwrap();
+        let parents = extract_superclasses(class_node, &lines_ref);
+        assert!(parents.is_empty());
+    }
+
+    #[test]
+    fn typescript_extends() {
+        let code = "class Dog extends Animal {}\n";
+        let lang = tree_sitter_typescript::LANGUAGE_TYPESCRIPT;
+        let (tree, lines) = parse_and_root(code, lang.into());
+        let lines_ref: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
+        let class_node = find_class_node(tree.root_node()).unwrap();
+        let parents = extract_superclasses(class_node, &lines_ref);
+        assert_eq!(parents, vec!["Animal"]);
+    }
+
+    #[test]
+    fn java_extends() {
+        let code = "class MyList extends ArrayList {}\n";
+        let lang = tree_sitter_java::LANGUAGE;
+        let (tree, lines) = parse_and_root(code, lang.into());
+        let lines_ref: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
+        let class_node = find_class_node(tree.root_node()).unwrap();
+        let parents = extract_superclasses(class_node, &lines_ref);
+        assert_eq!(parents, vec!["ArrayList"]);
+    }
+
+    #[test]
+    fn cpp_base_class() {
+        let code = "class Derived : public Base {};\n";
+        let lang = tree_sitter_cpp::LANGUAGE;
+        let (tree, lines) = parse_and_root(code, lang.into());
+        let lines_ref: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
+        let class_node = find_class_node(tree.root_node()).unwrap();
+        let parents = extract_superclasses(class_node, &lines_ref);
+        assert_eq!(parents, vec!["Base"]);
     }
 }

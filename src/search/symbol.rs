@@ -7,7 +7,7 @@ use std::time::SystemTime;
 use super::file_metadata;
 use super::treesitter::{
     definition_weight, extract_definition_name, extract_impl_trait, extract_impl_type,
-    extract_implemented_interfaces, DEFINITION_KINDS,
+    extract_implemented_interfaces, extract_superclasses, DEFINITION_KINDS,
 };
 
 use crate::error::DrailError;
@@ -31,6 +31,7 @@ pub fn search(
     query: &str,
     scope: &Path,
     context: Option<&Path>,
+    limit: Option<usize>,
 ) -> Result<SearchResult, DrailError> {
     // Compile regex once, share across both arms
     let word_pattern = format!(r"\b{}\b", regex_syntax::escape(query));
@@ -64,8 +65,10 @@ pub fn search(
     let total = merged.len();
     let usage_count = total - def_count;
 
+    let max_matches = limit.unwrap_or(MAX_MATCHES);
+
     rank::sort(&mut merged, query, scope, context);
-    merged.truncate(MAX_MATCHES);
+    merged.truncate(max_matches);
 
     Ok(SearchResult {
         query: query.to_string(),
@@ -224,6 +227,14 @@ fn walk_for_definitions(
                     .get(node.start_position().row)
                     .unwrap_or(&"")
                     .trim_end();
+                let parents = if kind == "class_declaration"
+                    || kind == "class_definition"
+                    || kind == "class_specifier"
+                {
+                    extract_superclasses(node, lines)
+                } else {
+                    Vec::new()
+                };
                 defs.push(Match {
                     path: path.to_path_buf(),
                     line: line_num,
@@ -239,6 +250,7 @@ fn walk_for_definitions(
                     def_name: Some(query.to_string()),
                     def_weight: definition_weight(node.kind()),
                     impl_target: None,
+                    parents,
                 });
             }
         }
@@ -270,6 +282,7 @@ fn walk_for_definitions(
                         def_name: Some(format!("impl {query} for {impl_type}")),
                         def_weight: 80,
                         impl_target: Some(query.to_string()),
+                        parents: Vec::new(),
                     });
                 }
             }
@@ -298,6 +311,7 @@ fn walk_for_definitions(
                     def_name: Some(format!("{class_name} implements {query}")),
                     def_weight: 80,
                     impl_target: Some(query.to_string()),
+                    parents: Vec::new(),
                 });
             }
         }
@@ -344,6 +358,7 @@ fn find_defs_heuristic_buf(
                 def_name: Some(query.to_string()),
                 def_weight: 60,
                 impl_target: None,
+                parents: Vec::new(),
             });
         }
     }
@@ -414,6 +429,7 @@ fn find_usages(
                         def_name: None,
                         def_weight: 0,
                         impl_target: None,
+                        parents: Vec::new(),
                     })
                     .collect::<Vec<_>>();
 
@@ -447,6 +463,7 @@ fn find_usages(
                         def_name: None,
                         def_weight: 0,
                         impl_target: None,
+                        parents: Vec::new(),
                     });
                     Ok(true)
                 }),

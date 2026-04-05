@@ -7,9 +7,19 @@ use crate::output::{json, text};
 use serde_json::{json, Map, Value};
 
 pub fn run(args: &SearchTextArgs) -> Result<CommandOutput, DrailError> {
-    let result = search::run_text(&args.query, &args.scope, args.budget)?;
-    let next = next_for_search(&result);
-    let diagnostics = diagnostics_without_suggestions(&result.diagnostics);
+    let result = search::run_text(&args.query, &args.scope, args.limit, args.budget)?;
+    let mut next = next_for_search(&result);
+    if let Some(hint) = crate::output::truncation_hint(
+        result.data.matches.len(),
+        result.total_found,
+        "matches",
+        "drail search text",
+        &result.data.query,
+        &result.data.scope,
+    ) {
+        next.push(hint);
+    }
+    let diagnostics = crate::output::diagnostics_without_suggestions(&result.diagnostics);
     let mut output = CommandOutput::with_parts(
         "search.text",
         text::search::render(&result),
@@ -21,19 +31,6 @@ pub fn run(args: &SearchTextArgs) -> Result<CommandOutput, DrailError> {
     output.next = next;
 
     Ok(output)
-}
-
-fn diagnostics_without_suggestions(
-    diagnostics: &[crate::output::json::envelope::Diagnostic],
-) -> Vec<crate::output::json::envelope::Diagnostic> {
-    diagnostics
-        .iter()
-        .cloned()
-        .map(|mut diagnostic| {
-            diagnostic.suggestion = None;
-            diagnostic
-        })
-        .collect()
 }
 
 fn next_for_search(result: &search::SearchCommandResult) -> Vec<NextItem> {

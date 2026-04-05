@@ -1,5 +1,3 @@
-# drail workflow patterns
-
 ## Large file navigation
 ```bash
 drail read src/server.rs                    # -> outline: [105-180] fn start()
@@ -8,159 +6,107 @@ drail read src/server.rs --lines 105:180   # -> the function you need
 
 ## JSON config navigation
 ```bash
-drail read config.json --key database.host           # -> just the host value
-drail read config.json --key users --index 0:3       # -> first 3 users
-drail read package.json --key scripts                # -> all npm scripts
+drail read config.json --key database.host
+drail read config.json --key users --index 0:3
+drail read package.json --key scripts
 ```
 
-## Trace a call chain (A calls B calls C)
+## Handling truncated results
+When `## Next` says results were truncated (e.g. "31 more matches not shown"):
 ```bash
-# Use symbol callers — it already gives you 2 hops:
-drail symbol callers compute_loss --scope src/
-# The "callers" section = direct callers (hop 1)
-# The "impact" section = who calls the callers (hop 2)
-# This single command traces: compute_loss <- training_step <- _inner_training_loop
-
-# For deeper hops, chain callers:
-drail symbol callers training_step --scope src/
-# Now you see training_step's callers and THEIR callers (hop 3-4)
+drail search text "pattern" --scope src/ --limit 50   # override default cap of 10
+drail symbol find TypeName --scope src/ --limit 30     # override default cap of 10
+drail files "*.rs" --scope src/ --limit 50             # override default cap of 20
 ```
-**Key:** `symbol callers` includes a 2nd-hop `impact` section. Don't trace manually — read the impact field. For 3+ hops, chain another `symbol callers` call on the intermediate caller.
+**Always re-run with `--limit` when completeness matters.** The `## Next` section provides the exact command.
 
-**Note:** `symbol callers` may return 0 results for `self.method()` calls (Python method calls with self prefix). In that case, use `search text "self.method_name("` or `symbol find method_name` to find call sites manually.
-
-## Multi-hop impact tracing (3+ hops)
+## Trace a call chain
 ```bash
-# Hop 1: Find direct callers of target method
-drail symbol callers target_method --scope src/
-# If 0 results (self.method call), fallback:
-drail search text "self.target_method(" --scope src/
-# Read the caller methods to confirm the call is via self.target_method(...)
+drail symbol callers target_symbol --scope src/
+# callers = hop 1, impact = hop 2
+# For deeper hops, chain another callers query:
+drail symbol callers intermediate_symbol --scope src/
+```
+**Key:** If structural callers miss a relation, use `search text` for the concrete invocation text and confirm by reading the enclosing symbol.
 
-# Hop 2: Find callers of the direct callers
+## Multi-hop impact tracing
+```bash
+drail symbol callers target_symbol --scope src/
+drail search text "target_symbol(" --scope src/   # fallback if structural callers miss
 drail symbol callers direct_caller --scope src/
-# If 0 results, search text fallback again
-
-# Hop 3: Find callers of hop-2 callers
 drail symbol callers hop2_caller --scope src/
 ```
-**Key:** For each hop, explicitly state:
-1. **What calls what** — e.g., "method A calls self.B()" 
-2. **The call mechanism** — e.g., "via self.method_name()" or "direct function call"
-3. **Where** — file path and approximate line number
-4. **Chain depth** — say hop 1 / hop 2 / hop 3 explicitly
-Chain at least 3 hops when the prompt asks for deep impact. Don't stop at 2 hops.
+For each hop, state: what calls what, the **exact call form** (e.g. `self.method_name()`, direct call, callback), file location, and hop depth.
+When the prompt asks how far impact goes, answer with the deepest verified hop count, not a guess.
+Always use `drail` commands for every step — never fall back to Read or Grep.
 
-**Example phrasing:** "`_prepare_inputs` calls `self._generate_and_score_completions(...)` in grpo_trainer.py; then `prediction_step` calls `_prepare_inputs(...)`; then the evaluation loop calls `prediction_step(...)`."
-**If the prompt asks 'how deep does the impact go?'** answer with an explicit hop count, e.g. "verified 3 hops."
-
-## Find ALL implementations/overrides of a method
+## Find complete implementation sets
 ```bash
-# IMPORTANT: Use symbol find, NOT search text. search text caps at 10 results.
-drail symbol find _generate_and_score_completions --scope src/
-# Returns ALL definitions (even 7+) across stable and experimental code.
-# symbol find --kind definition filters to definitions only.
+drail symbol find target_symbol --scope src/
+# Use when you need definitions with bodies inline.
+# For exhaustive literal matches, use: drail search text "target_symbol" --scope src/ --limit 50
 ```
-**Key:** `search text` returns max 10 matches and may miss implementations. `symbol find` returns all definitions with full body inline. Always use `symbol find` when you need completeness.
+**Key:** `symbol find` gives structural results with bodies; `search text --limit` gives all literal occurrences.
 
-## Find class and base classes
+## Trace type hierarchy
 ```bash
-drail symbol find PreTrainedModel --scope src/ --kind definition
-# Evidence shows class definition with all base classes/mixins inline. DONE.
+drail symbol find TypeName --scope src/ --kind definition
+drail symbol find BaseType --scope src/ --kind definition   # if needed
 ```
 
-## Trace inheritance chain
+## Find all derived types
 ```bash
-drail symbol find ClassName --scope src/ --kind definition
-# Shows class + bases. Read the base:
-drail symbol find BaseName --scope src/ --kind definition
-# 2 commands. DONE.
+drail symbol find BaseType --scope src/
+# Definition shows parents; usages show derived types / implementations.
+# If results are truncated, re-run with --limit to get full set.
 ```
+**Answer format:**
+1. State what the target type **inherits from / extends / implements** — trace the full chain (e.g. if BaseType extends GrandparentType, state both levels). Use `drail symbol find` on the parent to discover its parents.
+2. List all derived types found
+3. Give the total count
+4. State scope coverage (e.g. "covers both stable/ and experimental/")
 
-## Find all subclasses
+## Compare analogous implementations
 ```bash
-# Use symbol find WITHOUT --kind definition:
-drail symbol find _BaseTrainer --scope src/
-# Returns definition + ALL usages. Usages include every "class X(_BaseTrainer)" definition.
-# This finds ALL subclasses across stable + experimental code.
-# search text caps at 10 results and may miss subclasses.
-# The definition shows what _BaseTrainer inherits from (its parent class).
+drail symbol find TypeA --scope src/
+drail symbol find TypeB --scope src/
+drail symbol find method_name --scope src/
 ```
-**IMPORTANT:** When listing a class hierarchy, ALWAYS report:
-1. What the target class **inherits from** (its base/parent class) — read the class definition line
-2. ALL classes that **inherit from** the target (subclasses) — found in usages
-3. The **final total count** of subclasses
-4. Whether the list covers both **stable** and **experimental** locations when the prompt asks for both
-Both directions matter. `symbol find X` gives you both: the definition shows parents, usages show children.
-
-## Compare trainer loss implementations
-```bash
-# First establish hierarchy
-drail symbol find DPOTrainer --scope src/
-drail symbol find GRPOTrainer --scope src/
-# Then inspect the loss methods
-drail symbol find compute_loss --scope src/
-```
-**Always state upfront:**
-1. `DPOTrainer` and `GRPOTrainer` both inherit from `_BaseTrainer`
-2. DPO loss uses a reference-model / implicit-reference style comparison
-3. GRPO loss uses advantages / group-normalized rewards or group scores
-4. Then compare which implementation is larger/more complex
-
+**Answer format:**
+1. First line: state whether TypeA and TypeB share a common base type / interface / trait
+2. Then: key inputs/signals each uses, structural differences, and relative complexity
 
 ## Dependency blast-radius check
 ```bash
 drail deps src/auth.ts
-# Shows: what it imports (uses_local, uses_external) and who imports it (used_by)
-# Before renaming/moving/deleting a file, check used_by is empty or manageable.
+# Shows uses_local, uses_external, and used_by.
 ```
 
-## Read full method behavior
+## Read full symbol behavior
 ```bash
-drail symbol find save_model --scope src/
-# Then read the method body or signature section.
+drail symbol find target_symbol --scope src/
+# Then read the full body or signature if needed.
 ```
-**Always capture:**
-1. What else gets saved besides the main model
-2. Wrapper/distributed conditions
-3. Default parameter behavior from the signature/body (e.g. `output_dir` falls back to `self.args.output_dir` when `None`)
-
+Capture side effects, important branches, and default/fallback behavior.
 
 ## Multi-scope scanning
 ```bash
 drail scan --scope src --scope tests --pattern "TODO|FIXME" --budget 3000
-# Searches both src/ and tests/ for TODOs in one call.
 ```
 
-## Cross-repo registration pattern comparison
+## Cross-repo architecture comparison
 ```bash
-# Unsloth side
-drail search text "register_model" --scope unsloth/
-drail files "*_*.py" --scope unsloth/models
-# Transformers side
-drail search text "MODEL_MAPPING" --scope transformers/models/auto
+drail search text "register|mapping|factory|dispatch" --scope projectA/
+drail files "*.{rs,py,ts,js,go,java,cpp}" --scope projectA/
+drail search text "register|mapping|factory|dispatch" --scope projectB/
 ```
-**Always state explicitly:**
-1. Unsloth uses explicit registration via `register_model` in `registry/registry.py`
-2. Unsloth has per-family files such as `_llama.py`, `_gemma.py`, etc.
-3. Transformers uses config-to-model mappings in `models/auto/`
-4. Architectural difference: Unsloth = explicit registration; Transformers = config-driven mapping
-
+State each codebase's extension mechanism, where it is defined, and the architectural difference in concrete terms — name specific structural patterns (e.g. per-variant registration files, centralized mapping dicts, factory classes).
 
 ## Find files and check structure
 ```bash
 drail files "*.test.*" --scope src
-# Lists matching test files. Then drill into one:
 drail read src/auth.test.ts
 ```
 
 ## Diagnostic-driven recovery
-When drail returns 0 results, check `## Next`:
-1. `no_symbol_matches` -> Next suggests `drail search text "..."` (try broader text search)
-2. `no_search_matches` + slash-looking query -> Next suggests `drail search regex "..."`
-3. `callers_relation_not_meaningful` -> symbol isn't callable, Next suggests `symbol find`
-4. `no_file_matches` -> Next suggests broader glob or lists available extensions
-5. `text_fallback_used` -> results are best-effort, structural parsing failed
-6. `minified_fallback_used` -> file is minified, showing bounded preview
-
-Always prefer the `## Next` suggestion over inventing your own recovery strategy.
+Prefer `## Next` suggestions from drail output over inventing recovery steps.

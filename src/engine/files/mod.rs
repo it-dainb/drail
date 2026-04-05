@@ -21,16 +21,18 @@ pub struct FilesData {
 #[derive(Debug, Clone)]
 pub struct FilesCommandResult {
     pub data: FilesData,
+    pub total_found: usize,
     pub diagnostics: Vec<Diagnostic>,
 }
 
 pub fn run(
     pattern: &str,
     scope: &Path,
+    limit: Option<usize>,
     budget: Option<u64>,
 ) -> Result<FilesCommandResult, DrailError> {
     let scope = crate::engine::resolve_scope(scope);
-    let result = crate::search::glob::search(pattern, &scope)?;
+    let result = crate::search::glob::search(pattern, &scope, limit)?;
 
     let mut command_result = FilesCommandResult {
         data: FilesData {
@@ -50,6 +52,7 @@ pub fn run(
                 })
                 .collect(),
         },
+        total_found: result.total_found,
         diagnostics: diagnostics(
             pattern,
             &scope,

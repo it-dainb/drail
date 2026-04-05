@@ -70,7 +70,7 @@ fn read_requires_path_arg() {
     let output = run_drail(["read"]);
 
     assert_failure(&output);
-    assert_contains(&stderr(&output), "USAGE:");
+    assert_contains(&stderr(&output), "Usage:");
 }
 
 #[test]

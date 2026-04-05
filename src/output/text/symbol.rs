@@ -24,6 +24,14 @@ pub fn render(result: &SymbolFindCommandResult) -> String {
         }
     );
 
+    if result.data.hierarchy.len() > 1 {
+        let _ = write!(
+            output,
+            "\n\nHierarchy: {}",
+            result.data.hierarchy.join(" -> ")
+        );
+    }
+
     for entry in &result.data.matches {
         let _ = write!(
             output,
@@ -38,6 +46,9 @@ pub fn render(result: &SymbolFindCommandResult) -> String {
         );
         if let Some(snippet) = &entry.snippet {
             let _ = write!(output, "\n  {snippet}");
+        }
+        if !entry.parents.is_empty() {
+            let _ = write!(output, "\n  Parents: {}", entry.parents.join(", "));
         }
     }
 

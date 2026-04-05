@@ -7,8 +7,17 @@ use crate::output::{json, text};
 use serde_json::{json, Map, Value};
 
 pub fn run(args: &SymbolCallersArgs) -> Result<CommandOutput, DrailError> {
-    let result = symbol::run_callers(&args.query, &args.scope, args.budget)?;
-    let next = next_for_symbol_callers(&result);
+    let result = symbol::run_callers(&args.query, &args.scope, args.limit, args.budget)?;
+    let mut next = next_for_symbol_callers(&result);
+    if result.truncated {
+        next.push(crate::output::suggestion(
+            "Results were truncated. Use --limit to see more, or --scope to narrow",
+            format!(
+                "drail symbol callers {:?} --scope {} --limit 50",
+                result.data.query, result.data.scope,
+            ),
+        ));
+    }
     let meta = meta_for_symbol_callers(&result);
     let mut output = CommandOutput::with_parts(
         "symbol.callers",

@@ -21,12 +21,14 @@ pub struct GlobResult {
 }
 
 /// Glob search using `ignore::WalkBuilder` (parallel, .gitignore-aware).
-pub fn search(pattern: &str, scope: &Path) -> Result<GlobResult, DrailError> {
+pub fn search(pattern: &str, scope: &Path, limit: Option<usize>) -> Result<GlobResult, DrailError> {
     let glob = Glob::new(pattern).map_err(|e| DrailError::InvalidQuery {
         query: pattern.to_string(),
         reason: e.to_string(),
     })?;
     let matcher = glob.compile_matcher();
+
+    let max_files = limit.unwrap_or(MAX_FILES);
 
     let files: std::sync::Mutex<Vec<GlobFileEntry>> = std::sync::Mutex::new(Vec::new());
     let total_found = std::sync::atomic::AtomicUsize::new(0);
@@ -70,7 +72,7 @@ pub fn search(pattern: &str, scope: &Path) -> Result<GlobResult, DrailError> {
                 let mut locked = files
                     .lock()
                     .unwrap_or_else(std::sync::PoisonError::into_inner);
-                if locked.len() < MAX_FILES {
+                if locked.len() < max_files {
                     locked.push(GlobFileEntry {
                         path: path.to_path_buf(),
                         preview,
@@ -87,8 +89,8 @@ pub fn search(pattern: &str, scope: &Path) -> Result<GlobResult, DrailError> {
         .into_inner()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     files.sort_by(|left, right| left.path.cmp(&right.path));
-    if files.len() > MAX_FILES {
-        files.truncate(MAX_FILES);
+    if files.len() > max_files {
+        files.truncate(max_files);
     }
     let extensions = extensions
         .into_inner()

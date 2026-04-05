@@ -1,0 +1,9 @@
+[submodule "skill/tests/unsloth"]
+	path = skill/tests/unsloth
+	url = https://github.com/unslothai/unsloth
+[submodule "skill/tests/trl"]
+	path = skill/tests/trl
+	url = https://github.com/huggingface/trl
+[submodule "skill/tests/transformers"]
+	path = skill/tests/transformers
+	url = https://github.com/huggingface/transformers

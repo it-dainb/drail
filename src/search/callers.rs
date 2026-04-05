@@ -534,7 +534,7 @@ pub fn search_callers_expanded(
     _expand: usize,
     context: Option<&Path>,
 ) -> Result<String, DrailError> {
-    let result = search_callers_structured(target, scope, bloom, context)?;
+    let result = search_callers_structured(target, scope, bloom, context, None)?;
 
     if result.callers.is_empty() {
         return Ok(format!(
@@ -610,6 +610,7 @@ pub fn search_callers_structured(
     scope: &Path,
     bloom: &crate::index::bloom::BloomFilterCache,
     context: Option<&Path>,
+    limit: Option<usize>,
 ) -> Result<CallerSearchResult, DrailError> {
     let (callers, text_fallback_used) = find_callers(target, scope, bloom)?;
 
@@ -630,7 +631,9 @@ pub fn search_callers_structured(
         .map(|c| c.calling_function.clone())
         .collect();
 
-    sorted_callers.truncate(MAX_MATCHES);
+    let max_matches = limit.unwrap_or(MAX_MATCHES);
+
+    sorted_callers.truncate(max_matches);
 
     let callers = sorted_callers
         .iter()

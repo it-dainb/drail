@@ -260,7 +260,7 @@ fn quick_start_commands_from_readme_stay_valid() {
     assert_success(&files);
     assert_contains(&files_text, "# files");
     assert_contains(&files_text, "files \"*.rs\"");
-    assert_contains(&files_text, "## Next\n(none)");
+    assert_contains(&files_text, "## Next");
 
     let deps = run_drail(["deps", "src/main.rs"]);
     let deps_text = stdout(&deps);

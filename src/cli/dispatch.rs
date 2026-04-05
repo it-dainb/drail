@@ -17,6 +17,8 @@ pub fn run(cli: &Cli) -> Result<(), DrailError> {
         Command::Map(ref args) => commands::map::run(args)?,
         Command::Scan(ref args) => commands::scan::run(args)?,
         Command::InstallSkill(ref args) => commands::install_skill::run(args)?,
+        Command::Uninstall(ref args) => commands::uninstall::run(args)?,
+        Command::Upgrade(ref args) => commands::upgrade::run(args)?,
     };
 
     output::write(&rendered, cli.json, std::io::stdout().is_terminal());
@@ -36,5 +38,7 @@ pub fn command_name(command: &Command) -> &'static str {
         Command::Map(_) => "map",
         Command::Scan(_) => "scan",
         Command::InstallSkill(_) => "install-skill",
+        Command::Uninstall(_) => "uninstall",
+        Command::Upgrade(_) => "upgrade",
     }
 }

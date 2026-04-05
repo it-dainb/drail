@@ -28,6 +28,39 @@ pub fn suggestion(message: impl Into<String>, command: impl Into<String>) -> Nex
     }
 }
 
+/// Returns a "N more not shown" hint when `total > shown`, or `None` otherwise.
+#[must_use]
+pub fn truncation_hint(
+    shown: usize,
+    total: usize,
+    noun: &str,
+    command_prefix: &str,
+    query: &str,
+    scope: &str,
+) -> Option<NextItem> {
+    if total <= shown {
+        return None;
+    }
+    let omitted = total - shown;
+    Some(suggestion(
+        format!("{omitted} more {noun} not shown. Use --limit to see more, or --scope to narrow"),
+        format!("{command_prefix} {query:?} --scope {scope} --limit {total}"),
+    ))
+}
+
+/// Strip suggestions from diagnostics (used when next-items carry the suggestions instead).
+#[must_use]
+pub fn diagnostics_without_suggestions(diagnostics: &[Diagnostic]) -> Vec<Diagnostic> {
+    diagnostics
+        .iter()
+        .cloned()
+        .map(|mut d| {
+            d.suggestion = None;
+            d
+        })
+        .collect()
+}
+
 impl CommandOutput {
     #[must_use]
     pub fn with_parts(

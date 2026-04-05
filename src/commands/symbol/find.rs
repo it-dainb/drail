@@ -7,8 +7,18 @@ use crate::output::{json, text};
 use serde_json::{json, Map, Value};
 
 pub fn run(args: &SymbolFindArgs) -> Result<CommandOutput, DrailError> {
-    let result = symbol::run(&args.query, &args.scope, args.kind, args.budget)?;
-    let next = next_for_symbol_find(&result);
+    let result = symbol::run(&args.query, &args.scope, args.kind, args.limit, args.parents, args.budget)?;
+    let mut next = next_for_symbol_find(&result);
+    if let Some(hint) = crate::output::truncation_hint(
+        result.data.matches.len(),
+        result.total_found,
+        "matches",
+        "drail symbol find",
+        &result.data.query,
+        &result.data.scope,
+    ) {
+        next.push(hint);
+    }
     let mut output = CommandOutput::with_parts(
         "symbol.find",
         text::symbol::render(&result),

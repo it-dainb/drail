@@ -28,6 +28,8 @@ pub enum Command {
     Map(MapArgs),
     Scan(ScanArgs),
     InstallSkill(InstallSkillArgs),
+    Uninstall(UninstallArgs),
+    Upgrade(UpgradeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -74,6 +76,13 @@ pub struct SymbolFindArgs {
     pub kind: Option<SymbolFindKind>,
 
     #[arg(long)]
+    pub limit: Option<usize>,
+
+    /// Trace the full parent class hierarchy
+    #[arg(long)]
+    pub parents: bool,
+
+    #[arg(long)]
     pub budget: Option<u64>,
 }
 
@@ -90,6 +99,9 @@ pub struct SymbolCallersArgs {
 
     #[arg(long, default_value = ".")]
     pub scope: PathBuf,
+
+    #[arg(long)]
+    pub limit: Option<usize>,
 
     #[arg(long)]
     pub budget: Option<u64>,
@@ -109,6 +121,9 @@ pub struct SearchTextArgs {
     pub scope: PathBuf,
 
     #[arg(long)]
+    pub limit: Option<usize>,
+
+    #[arg(long)]
     pub budget: Option<u64>,
 }
 
@@ -120,6 +135,9 @@ pub struct SearchRegexArgs {
     pub scope: PathBuf,
 
     #[arg(long)]
+    pub limit: Option<usize>,
+
+    #[arg(long)]
     pub budget: Option<u64>,
 }
 
@@ -129,6 +147,9 @@ pub struct FilesArgs {
 
     #[arg(long, default_value = ".")]
     pub scope: PathBuf,
+
+    #[arg(long)]
+    pub limit: Option<usize>,
 
     #[arg(long)]
     pub budget: Option<u64>,
@@ -193,4 +214,20 @@ pub enum InstallSkillTarget {
     Both,
     Detected,
     Skip,
+}
+
+#[derive(Debug, Args)]
+pub struct UninstallArgs {
+    #[arg(long, value_enum)]
+    pub target: Option<InstallSkillTarget>,
+
+    /// Also remove the drail binary itself
+    #[arg(long)]
+    pub bin: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct UpgradeArgs {
+    #[arg(long, value_enum)]
+    pub target: Option<InstallSkillTarget>,
 }

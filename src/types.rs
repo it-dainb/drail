@@ -91,6 +91,9 @@ pub struct Match {
     /// For impl/implements matches: the trait or interface being implemented.
     /// None for primary definitions and plain usages.
     pub impl_target: Option<String>,
+    /// Parent classes/superclasses extracted from class definitions.
+    /// Empty for non-class definitions and usages.
+    pub parents: Vec<String>,
 }
 
 /// Assembled search results before formatting.

@@ -129,7 +129,7 @@ fn run_scope(
     let mut files: Vec<ScanFileEntry> = Vec::new();
 
     for glob in &globs {
-        let glob_result = crate::search::glob::search(glob, scope)?;
+        let glob_result = crate::search::glob::search(glob, scope, None)?;
         for entry in glob_result.files {
             if seen_paths.insert(entry.path.clone()) {
                 let rel_path = entry
@@ -159,7 +159,7 @@ fn run_scope(
             .collect::<Vec<_>>()
             .join("|");
 
-        let search_result = crate::search::content::search(&combined, scope, true, None)?;
+        let search_result = crate::search::content::search(&combined, scope, true, None, None)?;
 
         // Post-filter: only keep matches in the glob-matched file set
         let matched_paths: HashSet<&str> = files.iter().map(|f| f.path.as_str()).collect();
