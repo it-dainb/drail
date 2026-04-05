@@ -89,15 +89,19 @@ function maybeInstallSkill() {
     return;
   }
 
-  if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    console.log("drail: skipping skill prompt in non-interactive install");
-    return;
-  }
+  const args = process.stdin.isTTY && process.stdout.isTTY
+    ? ["install-skill"]
+    : ["install-skill", "--target", "detected"];
 
   try {
-    execFileSync(binPath, ["install-skill"], { stdio: "inherit" });
+    execFileSync(binPath, args, { stdio: "inherit" });
   } catch (err) {
-    process.exit(err.status ?? 1);
+    // Non-interactive install failure is not fatal — the binary still works
+    if (args.length > 1) {
+      console.log("drail: skill auto-install failed (non-fatal), run 'drail install-skill' manually");
+    } else {
+      process.exit(err.status ?? 1);
+    }
   }
 }
 
