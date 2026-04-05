@@ -45,9 +45,10 @@ We test drail on 6 challenging code navigation tasks against real ML codebases (
 ## Quick Start
 
 ```bash
-# Install
-cargo install --path .
+npm install -g drail    # installs binary + Claude Code skill automatically
+```
 
+```bash
 # Explore a codebase
 drail map --scope src/
 drail symbol find main --scope src/
@@ -164,10 +165,19 @@ cargo run -- files "*.rs" --scope tests/fixtures/drailignore  # demonstrates .dr
 
 ## Installation
 
+### npm (recommended)
+
+```bash
+npm install -g drail
+```
+
+Downloads the prebuilt binary for your platform and auto-installs the Claude Code skill. Supports Linux x64, Linux arm64, and Windows x64.
+
 ### From source (Cargo)
 
 ```bash
 cargo install --path .
+drail install-skill     # install Claude Code skill separately
 ```
 
 ### Local installer
@@ -175,12 +185,6 @@ cargo install --path .
 ```bash
 ./install.sh          # install to ~/.local/bin
 ./install.sh --dry-run  # preview only
-```
-
-### npm
-
-```bash
-npm install -g drail-cli
 ```
 
 ## Claude Code Skill
